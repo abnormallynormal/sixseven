@@ -4,14 +4,22 @@
 #include "board.h"
 #include "string"
 #include <iostream>
-std::string moveToString(Move &m)
+std::string moveToString(Move &m, Board &board)
 {
   if (m.isCastling)
   {
     if (m.isKingside)
-      return "e1g1"; // or e8g8, doesn't matter for split debugging
+      if (board.isWhiteToMove())
+        return "e1g1";
+      else
+        return "e8g8";
     else
-      return "e1c1";
+    {
+      if (board.isWhiteToMove())
+        return "e1c1";
+      else
+        return "e8c8";
+    }
   }
   std::string result = "";
   result += (char)('a' + (m.from % 8));
@@ -37,8 +45,9 @@ u64 perft(Board &board, int depth, bool white, MoveGenerator &moveGen, int ply =
     if (!moveGen.isInCheck(board, white))
     {
       int currentNodes = perft(board, depth - 1, !white, moveGen, ply + 1);
-      // if(ply == 0)
-      //   std::cout << "\n" << moveToString(m) << " " << currentNodes;
+      // if (ply == 0)
+      //   std::cout << "\n"
+      //             << moveToString(m, board) << " " << currentNodes;
       nodes += currentNodes;
     }
     board.unmakeMove(m);

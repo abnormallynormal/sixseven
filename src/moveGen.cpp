@@ -380,10 +380,31 @@ void MoveGenerator::generatePawnMoves(Board &board)
     while (captures)
     {
       int to = __builtin_ctzll(captures);
-      addMove(Move(pawnPos, to));
+      u64 toBit = 1ULL << to;
+      if (toBit & promotionRanks)
+      {
+        if (isWhite)
+        {
+          addMove(Move(pawnPos, to, wKnight));
+          addMove(Move(pawnPos, to, wBishop));
+          addMove(Move(pawnPos, to, wRook));
+          addMove(Move(pawnPos, to, wQueen));
+        }
+        else
+        {
+          addMove(Move(pawnPos, to, bKnight));
+          addMove(Move(pawnPos, to, bBishop));
+          addMove(Move(pawnPos, to, bRook));
+          addMove(Move(pawnPos, to, bQueen));
+        }
+      }
+      else
+      {
+        addMove(Move(pawnPos, to));
+      }
       captures &= captures - 1;
     }
-    u64 pawnPush = board.whiteToMove ? ((1ULL << pawnPos + 8) & ~(oppPieces | ownPieces)) : ((1ULL << pawnPos - 8) & ~(oppPieces | ownPieces));
+    u64 pawnPush = isWhite ? ((1ULL << pawnPos + 8) & ~(oppPieces | ownPieces)) : ((1ULL << pawnPos - 8) & ~(oppPieces | ownPieces));
     if (pawnPush != 0ULL)
     {
       int to = __builtin_ctzll(pawnPush);

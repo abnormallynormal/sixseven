@@ -8,26 +8,25 @@ Board::Board()
   halfMoveCount = 0;
   Piece initial[64] = {
       // Rank 1
-      // Rank 1
-      wRook, EMPTY, EMPTY, wQueen, EMPTY, wRook, wKing, EMPTY,
+      wRook, EMPTY, EMPTY, EMPTY, wKing, EMPTY, EMPTY, wRook,
 
       // Rank 2
-      wPawn, bPawn, EMPTY, wPawn, EMPTY, EMPTY, wPawn, wPawn,
+      wPawn, wPawn, wPawn, wBishop, wBishop, wPawn, wPawn, wPawn,
 
       // Rank 3
-      bQueen, EMPTY, EMPTY, EMPTY, EMPTY, wKnight, EMPTY, EMPTY,
+      EMPTY, EMPTY, wKnight, EMPTY, EMPTY, wQueen, EMPTY, bPawn,
 
       // Rank 4
-      wBishop, wBishop, wPawn, EMPTY, wPawn, EMPTY, EMPTY, EMPTY,
+      EMPTY, bPawn, EMPTY, EMPTY, wPawn, EMPTY, EMPTY, EMPTY,
 
       // Rank 5
-      bKnight, wPawn, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY,
+      EMPTY, EMPTY, EMPTY, wPawn, wKnight, EMPTY, EMPTY, EMPTY,
 
       // Rank 6
-      EMPTY, bBishop, EMPTY, EMPTY, EMPTY, bKnight, bBishop, wKnight,
+      bBishop, bKnight, EMPTY, EMPTY, bPawn, bKnight, bPawn, EMPTY,
 
       // Rank 7
-      wPawn, bPawn, bPawn, bPawn, EMPTY, bPawn, bPawn, bPawn,
+      bPawn, EMPTY, bPawn, bPawn, bQueen, bPawn, bBishop, EMPTY,
 
       // Rank 8
       bRook, EMPTY, EMPTY, EMPTY, bKing, EMPTY, EMPTY, bRook};
@@ -191,7 +190,23 @@ void Board::makeMove(Move &m)
       squares[m.to + 8] = EMPTY;
     }
   }
-  
+  else if (m.promotionPiece != EMPTY)
+  {
+    Piece pawnColor = whiteToMove ? wPawn : bPawn;
+    Piece pieceFrom = squares[m.from];
+    Piece pieceTo = squares[m.to];
+    u64 from = 1ULL << m.from;
+    u64 to = 1ull << m.to;
+    squares[m.to] = m.promotionPiece;
+    squares[m.from] = EMPTY;
+    bitboards[m.promotionPiece] |= to;
+    bitboards[pawnColor] &= ~from;
+    if (pieceTo != EMPTY)
+    {
+      bitboards[pieceTo] &= ~to;
+    }
+    castlingRights &= castlingRightsMask[m.to];
+  }
   else
   {
     Piece pieceFrom = squares[m.from];
@@ -274,6 +289,18 @@ void Board::unmakeMove(Move &m)
     squares[m.from] = movingPawn;
     squares[m.to] = EMPTY;
     squares[capturedSq] = capturedPawn;
+  }
+  else if(m.promotionPiece != EMPTY){
+    Piece pawnColor = whiteToMove ? wPawn : bPawn;
+    u64 from = 1ULL << m.from;
+    u64 to = 1ULL << m.to;
+    bitboards[m.promotionPiece] &= ~to;
+    bitboards[pawnColor] |= from;
+    if(m.prevState.capturedPiece != EMPTY){
+      bitboards[m.prevState.capturedPiece] |= to;
+    }
+    squares[m.to] = m.prevState.capturedPiece;
+    squares[m.from] = pawnColor;
   }
   else
   {

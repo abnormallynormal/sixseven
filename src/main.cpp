@@ -6,9 +6,8 @@ int main()
 {
   MoveGenerator mg;
   
-  // Test kiwipete
   Board b;
-  std::cout << "depth 4: " << perft(b, 5, true, mg);
+  std::cout << perft(b, 5, true, mg);
   
   return 0;
 }
