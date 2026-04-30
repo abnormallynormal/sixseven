@@ -2,12 +2,11 @@
 #include "moveGen.h"
 #include "perft.h"
 #include <iostream>
+
+MoveGenerator mg;
+Board b;
 int main()
 {
-  MoveGenerator mg;
-  
-  Board b;
   std::cout << perft(b, 5, true, mg);
-  
   return 0;
 }

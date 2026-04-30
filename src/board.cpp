@@ -1,5 +1,4 @@
 #include "board.h"
-#include "types.h"
 #include "constants.h"
 #include <iostream>
 Board::Board()

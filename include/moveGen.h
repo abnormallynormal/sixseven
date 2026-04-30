@@ -1,5 +1,5 @@
-#ifndef MOVEGEN_H
-#define MOVEGEN_H
+#pragma once 
+
 #include <vector>
 #include "types.h"
 class Board;
@@ -89,4 +89,3 @@ public:
   bool isAttacked(Board &board, bool white, int sq);
   bool isInCheck(Board &board, bool white);
 };
-#endif

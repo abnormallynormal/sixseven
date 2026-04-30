@@ -1,5 +1,5 @@
-#ifndef BOARD_H
-#define BOARD_H
+#pragma once
+
 #include "types.h"
 #include "moveGen.h"
 enum Square : int
@@ -75,7 +75,7 @@ class Board
 {
   friend class MoveGenerator;
 
-private:
+public:
   u64 bitboards[12];
   u64 whitePieces;
   u64 blackPieces;
@@ -86,7 +86,7 @@ private:
   int enPassantSquare;
   Piece squares[64];
 
-public:
+
   Board();
   void printBoard();
   void makeMove(Move &m);
@@ -108,4 +108,3 @@ public:
   u64 getOccupiedSquares() { return occupiedSquares; }
 };
 
-#endif

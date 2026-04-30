@@ -1,7 +1,6 @@
 #include "moveGen.h"
 #include "board.h"
 #include "constants.h"
-#include <bits/stdc++.h>
 
 MoveGenerator::MoveGenerator()
 {
@@ -244,14 +243,6 @@ u64 MoveGenerator::getRookAttacks(int sq, Board &board)
   u64 blockers = (board.whitePieces | board.blackPieces) & rookMasks[sq];
   u64 index = (blockers * rookMagic[sq]) >> (64 - rookShifts[sq]);
   u64 maxIndex = 1ULL << rookShifts[sq];
-  if (index >= maxIndex)
-  {
-    std::cerr << "Rook attack OOB! sq=" << sq
-              << " index=" << index
-              << " maxIndex=" << maxIndex
-              << " blockers=" << blockers << std::endl;
-    throw std::runtime_error("Rook OOB");
-  }
   return rookAttackTable[sq][index];
 }
 u64 MoveGenerator::getBishopAttacks(int sq, Board &board)

@@ -1,5 +1,5 @@
-#ifndef PERFT_H
-#define PERFT_H
+#pragma once
+
 #include "moveGen.h"
 #include "board.h"
 #include "string"
@@ -55,4 +55,4 @@ u64 perft(Board &board, int depth, bool white, MoveGenerator &moveGen, int ply =
   return nodes;
 }
 
-#endif
+

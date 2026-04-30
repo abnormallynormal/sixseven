@@ -1,5 +1,4 @@
-#ifndef TYPES_H
-#define TYPES_H
+#pragma once
 
 #include <cstdint>
 typedef uint64_t u64;
@@ -28,5 +27,3 @@ enum CastlingRights : int {
   bK = 4,
   bQ = 8
 };
-
-#endif
