@@ -1,4 +1,4 @@
-#pragma once 
+#pragma once
 
 #include <vector>
 #include "types.h"
@@ -26,7 +26,7 @@ struct Move
   int setEpSquare;
   Move() : from(0), to(0), setEpSquare(-1), isCastling(false), isKingside(false), isEnPassant(false), promotionPiece(EMPTY) {};
   Move(int from, int to) : from(from), to(to), setEpSquare(-1), isCastling(false), isKingside(false), isEnPassant(false), promotionPiece(EMPTY) {};
-  Move(int from, int to, Piece promotion) : from(from), to(to), promotionPiece(promotion), isCastling(false), isEnPassant(false), setEpSquare(-1){};
+  Move(int from, int to, Piece promotion) : from(from), to(to), promotionPiece(promotion), isCastling(false), isEnPassant(false), setEpSquare(-1) {};
   Move(int from, int to, bool isEp) : from(from), to(to), isEnPassant(isEp), isCastling(false), setEpSquare(-1), promotionPiece(EMPTY) {};
   Move(int from, int to, int epSquare) : from(from), to(to), setEpSquare(epSquare), isCastling(false), isEnPassant(false), promotionPiece(EMPTY) {};
 
@@ -86,6 +86,13 @@ public:
     moveLists[currentPly].moves[moveLists[currentPly].count++] = m;
   }
   void generateMoves(Board &board, int ply);
+  void generateKnightCaptures(Board &board);
+  void generateKingCaptures(Board &board);
+  void generatePawnCaptures(Board &board);
+  void generateRookCaptures(Board &board);
+  void generateBishopCaptures(Board &board);
+  void generateQueenCaptures(Board &board);
+  void generateCaptures(Board &board, int ply);
   bool isAttacked(Board &board, bool white, int sq);
   bool isInCheck(Board &board, bool white);
 };
