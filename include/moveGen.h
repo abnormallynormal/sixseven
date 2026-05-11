@@ -5,13 +5,14 @@
 class Board;
 struct Undo
 {
+  u64 hash;
   int castlingRights;
   int enPassantSquare;
   int halfMoveCount;
   Piece capturedPiece;
   bool whiteToMove;
   Undo() = default;
-  Undo(int castling, int ep, int count, Piece captured, bool white) : castlingRights(castling), enPassantSquare(ep), halfMoveCount(count), capturedPiece(captured), whiteToMove(white) {};
+  Undo(u64 hash, int castling, int ep, int count, Piece captured, bool white) : hash(hash), castlingRights(castling), enPassantSquare(ep), halfMoveCount(count), capturedPiece(captured), whiteToMove(white) {};
 };
 
 struct Move

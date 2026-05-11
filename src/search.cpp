@@ -1,7 +1,6 @@
 #include "search.h"
-#include "board.h"
+#include "constants.h"
 #include "evaluation.h"
-#include "moveGen.h"
 #include <climits>
 #include <algorithm>
 
@@ -16,9 +15,17 @@ int scoreMove(Board &board, Move m)
     return 0;
 }
 int mvv_lva(Piece attack, Piece victim) { return pieceVals[victim] - pieceVals[attack]; }
-
-int negamax(Board &board, MoveGenerator &moveGen, int alpha, int beta, int depth, int ply = 0)
+int negamax(Board &board, MoveGenerator &moveGen, int alpha, int beta, int depth, int ply)
 {
+  int originalAlpha = alpha;
+  Move bestMove;
+
+  int entryScore;
+  Move entryMove;
+  if (probeEntry(board.hash, depth, alpha, beta, ply, entryScore, entryMove))
+  {
+    return entryScore;
+  }
   if (depth == 0)
     return quiescence(board, moveGen, alpha, beta, ply);
   int greatestValue = INT_MIN;
@@ -26,7 +33,9 @@ int negamax(Board &board, MoveGenerator &moveGen, int alpha, int beta, int depth
   int scores[218] = {0};
   for (int i = 0; i < moveGen.moveLists[ply].count; i++)
   {
-    scores[i] = scoreMove(board, moveGen.moveLists[ply].moves[i]);
+    if (board.isSameMove(moveGen.moveLists[ply].moves[i], entryMove)) scores[i] = INT_MAX;
+    else
+      scores[i] = scoreMove(board, moveGen.moveLists[ply].moves[i]);
   }
   for (int i = 0; i < moveGen.moveLists[ply].count; i++)
   {
@@ -37,8 +46,8 @@ int negamax(Board &board, MoveGenerator &moveGen, int alpha, int beta, int depth
       {
         best = j;
       }
-      std::swap(scores[i], scores[j]);
-      std::swap(moveGen.moveLists[ply].moves[i], moveGen.moveLists[ply].moves[j]);
+      std::swap(scores[i], scores[best]);
+      std::swap(moveGen.moveLists[ply].moves[i], moveGen.moveLists[ply].moves[best]);
     }
 
     Move m = moveGen.moveLists[ply].moves[i];
@@ -52,6 +61,7 @@ int negamax(Board &board, MoveGenerator &moveGen, int alpha, int beta, int depth
     if (score > greatestValue)
     {
       greatestValue = score;
+      bestMove = m;
       if (score > alpha)
       {
         alpha = score;
@@ -68,15 +78,24 @@ int negamax(Board &board, MoveGenerator &moveGen, int alpha, int beta, int depth
   {
     if (moveGen.isInCheck(board, board.isWhiteToMove()))
     {
-      return -100000 * ply;
+      return -MATE_THRESHOLD + ply;
     }
     else
       return 0;
   }
+  int nodeType;
+  if (greatestValue <= originalAlpha)
+    nodeType = UPPER;
+  else if (greatestValue >= beta)
+    nodeType = LOWER;
+  else
+    nodeType = EXACT;
+  storeEntry(board.hash, greatestValue, depth, bestMove, nodeType, ply);
   return greatestValue;
 }
 
-Move rootNegamax(Board& board, MoveGenerator &moveGen, int depth){
+Move rootNegamax(Board &board, MoveGenerator &moveGen, int depth)
+{
   Move bestMove;
   int bestScore = INT_MIN;
 
@@ -157,6 +176,6 @@ int quiescence(Board &board, MoveGenerator &moveGen, int alpha, int beta, int pl
     }
   }
   if (greatestVal == INT_MIN && isInCheck)
-    return -100000 + ply;
+    return -MATE_THRESHOLD + ply;
   return greatestVal;
 }

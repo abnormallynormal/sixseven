@@ -1,13 +1,14 @@
 #pragma once
 
-#include "evaluation.h"
+#include "board.h"
+#include "moveGen.h"
 
-Move rootNegamax(Board &board, MoveGenerator &moveGen, int depth){}
+Move rootNegamax(Board &board, MoveGenerator &moveGen, int depth);
 
-int negamax(Board &board, MoveGenerator &moveGen, int alpha, int beta, int depth, int ply) {}
+int negamax(Board &board, MoveGenerator &moveGen, int alpha, int beta, int depth, int ply = 0);
 
-int scoreMove(Board &board, Move m) {}
+int scoreMove(Board &board, Move m);
 
-int mvv_lva(Piece attack, Piece victim) {}
+int mvv_lva(Piece attack, Piece victim);
 
-int quiescence(Board& board, MoveGenerator &moveGen, int alpha, int beta){}
+int quiescence(Board &board, MoveGenerator &moveGen, int alpha, int beta, int ply = 0);

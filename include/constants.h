@@ -1,3 +1,4 @@
+#pragma once
 #include "types.h"
 const u64 notAFile = 0xFEFEFEFEFEFEFEFE;
 const u64 notHFile = 0x7F7F7F7F7F7F7F7F;
@@ -10,6 +11,12 @@ const u64 eighthRank = 0xFF00000000000000;
 const u64 boardEdges = 0xFF818181818181FF;
 const u64 notEdges = ~boardEdges;
 const u64 promotionRanks = 0xFF000000000000FF;
+
+const int MATE_THRESHOLD = 100000;
+
+const int EXACT = 0;
+const int UPPER = 1;
+const int LOWER = 2;
 
 const int castlingRightsMask[64] = {
     ~wQ,
