@@ -1,5 +1,6 @@
 #include "search.h"
-#include "constants.h"
+#include "transposition.h"
+#include "search_constants.h"
 #include "evaluation.h"
 #include <climits>
 #include <algorithm>
