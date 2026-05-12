@@ -1,6 +1,6 @@
 #include "moveGen.h"
 #include "board.h"
-#include "bitboard_masks.h"
+#include "bitboardMasks.h"
 #include "magics.h"
 
 void MoveGenerator::precompute_knight_attacks()

@@ -1,6 +1,6 @@
 #include "moveGen.h"
 #include "board.h"
-#include "bitboard_masks.h"
+#include "bitboardMasks.h"
 
 void MoveGenerator::generate_knight_captures(Board &board)
 {

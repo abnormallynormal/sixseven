@@ -160,3 +160,15 @@ void Board::make_move(Move &m)
 
   update_position();
 }
+
+void Board::make_null_move()
+{
+  half_move_count++;
+  white_to_move = !white_to_move;
+  hash ^= side_key;
+  if (en_passant_square != NO_SQUARE)
+  {
+    en_passant_square = NO_SQUARE;
+    hash ^= ep_file[en_passant_square % 8];
+  }
+}

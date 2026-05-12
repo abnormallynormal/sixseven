@@ -1,4 +1,5 @@
 #include "board.h"
+#include "zobrist.h"
 
 void Board::unmake_move(Move &m)
 {
@@ -86,4 +87,9 @@ void Board::unmake_move(Move &m)
   }
 
   update_position();
+}
+
+void Board::unmake_null_move(){
+  half_move_count--;
+  hash ^= side_key;
 }

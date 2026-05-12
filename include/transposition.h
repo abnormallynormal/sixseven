@@ -1,7 +1,7 @@
 #pragma once
 #include "types.h"
 #include "move.h"
-#include "search_constants.h"
+#include "searchConstants.h"
 
 const int table_size = 1 << 20;
 

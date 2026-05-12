@@ -1,11 +1,12 @@
 #include "search.h"
 #include "transposition.h"
-#include "search_constants.h"
+#include "searchConstants.h"
 #include "evaluation.h"
 #include <climits>
 #include <algorithm>
 
 Move killer_table[2][256];
+int history_table[12][64]; //remember to reset
 
 int score_move(Board &board, Move m, int ply)
 {
@@ -14,14 +15,16 @@ int score_move(Board &board, Move m, int ply)
 
     return mvv_lva(board.squares[m.from], board.squares[m.to]);
   }
-  if(board.is_same_move(m, killer_table[0][ply])){
+  if (board.is_same_move(m, killer_table[0][ply]))
+  {
     return 90000;
   }
-  if(board.is_same_move(m, killer_table[1][ply])){
+  if (board.is_same_move(m, killer_table[1][ply]))
+  {
     return 80000;
   }
   else
-    return 0;
+    return history_table[board.squares[m.from]][m.to];
 }
 int mvv_lva(Piece attack, Piece victim) { return piece_vals[victim] - piece_vals[attack]; }
 
@@ -43,7 +46,8 @@ int negamax(Board &board, MoveGenerator &move_gen, int alpha, int beta, int dept
   int scores[218] = {0};
   for (int i = 0; i < move_gen.move_lists[ply].count; i++)
   {
-    if (board.is_same_move(move_gen.move_lists[ply].moves[i], entry_move)) scores[i] = INT_MAX;
+    if (board.is_same_move(move_gen.move_lists[ply].moves[i], entry_move))
+      scores[i] = INT_MAX;
     else
       scores[i] = score_move(board, move_gen.move_lists[ply].moves[i], ply);
   }
@@ -79,9 +83,11 @@ int negamax(Board &board, MoveGenerator &move_gen, int alpha, int beta, int dept
     }
     if (score >= beta)
     {
-      if(board.squares[m.to] == EMPTY){
+      if (board.squares[m.to] == EMPTY)
+      {
         killer_table[1][ply] = killer_table[0][ply];
         killer_table[0][ply] = m;
+        history_table[board.squares[m.from]][m.to] += depth * depth;
       }
       board.unmake_move(m);
       break;

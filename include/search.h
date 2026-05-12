@@ -4,6 +4,7 @@
 #include "moveGen.h"
 
 extern Move killer_table[2][256];
+extern Move history_table[12][64];
 
 Move root_negamax(Board &board, MoveGenerator &move_gen, int depth);
 

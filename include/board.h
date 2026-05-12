@@ -22,13 +22,14 @@ public:
   Board();
   void print_board();
   void make_move(Move &m);
-  void update_hash(Move &m);
-  void set_color_to_move(bool white)
+  void make_null_move();
+  inline void set_color_to_move(bool white)
   {
     white_to_move = white;
   }
-  bool is_white_to_move() const { return white_to_move; }
+  inline bool is_white_to_move() const { return white_to_move; }
   void unmake_move(Move &m);
+  void unmake_null_move();
   int get_file(int square) { return square % 8; }
   int get_rank(int square) { return square / 8; }
   inline bool is_same_move(Move &a, Move &b)
@@ -45,11 +46,11 @@ public:
       return false;
     return true;
   }
-  void update_position()
+  inline void update_position()
   {
     white_pieces = bitboards[wPawn] | bitboards[wKnight] | bitboards[wBishop] | bitboards[wRook] | bitboards[wQueen] | bitboards[wKing];
     black_pieces = bitboards[bPawn] | bitboards[bKnight] | bitboards[bBishop] | bitboards[bRook] | bitboards[bQueen] | bitboards[bKing];
     occupied_squares = white_pieces | black_pieces;
   }
-  u64 get_occupied_squares() { return occupied_squares; }
+  inline u64 get_occupied_squares() { return occupied_squares; }
 };
