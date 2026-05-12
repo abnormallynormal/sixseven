@@ -4,10 +4,7 @@
 
 void Board::makeMove(Move &m)
 {
-  if (halfMoveCount == 0)
-    m.prevState = Undo{hash, 15, NO_SQUARE, 0, EMPTY, true};
-  else
-    m.prevState = Undo{hash, castlingRights, enPassantSquare, halfMoveCount, squares[m.to], whiteToMove};
+  m.prevState = Undo{hash, castlingRights, enPassantSquare, halfMoveCount, squares[m.to], whiteToMove};
 
   hash ^= castlingRandoms[castlingRights];
   if (enPassantSquare != NO_SQUARE)

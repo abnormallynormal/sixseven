@@ -20,5 +20,6 @@ int knightOdds(Board &board);
 
 inline int evaluate(Board &board)
 {
-  return materialOdds(board);
+  int m = materialOdds(board);
+  return board.whiteToMove ? m : -m;
 }
