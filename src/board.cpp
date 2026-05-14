@@ -1,4 +1,5 @@
 #include "board.h"
+#include "evaluation.h"
 #include "zobrist.h"
 #include <iostream>
 #include <assert.h>
@@ -53,6 +54,13 @@ Board::Board()
   half_move_count = 0;
   en_passant_square = NO_SQUARE;
   hash = init_hash(*this);
+
+  opening_material = 0;
+  end_material = 0;
+  opening_psqt = 0;
+  end_psqt = 0;
+  phase = 0;
+  precompute_psqt(*this);
 }
 
 void Board::print_board()

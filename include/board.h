@@ -3,6 +3,7 @@
 #include "types.h"
 #include "square.h"
 #include "move.h"
+#include "evalConstants.h"
 
 class Board
 {
@@ -33,7 +34,29 @@ public:
   void unmake_move(Move &m);
   void unmake_null_move(Undo &undo_null);
 
-  
+  inline void Board::add_piece_eval(Piece p, int sq)
+  {
+    bool isWhite = p < 6;
+    int sign = isWhite ? 1 : -1;
+    int square = isWhite ? sq : (sq ^ 56);
+    opening_material += opening_piece_vals[p] * sign;
+    end_material += end_piece_vals[p] * sign;
+    opening_psqt += opening_tables[p % 6][square] * sign;
+    end_psqt += end_tables[p % 6][square] * sign;
+    phase += phase_weights[p];
+  }
+
+  inline void Board::remove_piece_eval(Piece p, int sq)
+  {
+    bool isWhite = p < 6;
+    int sign = isWhite ? 1 : -1;
+    int square = isWhite ? sq : (sq ^ 56);
+    opening_material -= opening_piece_vals[p] * sign;
+    end_material -= end_piece_vals[p] * sign;
+    opening_psqt -= opening_tables[p % 6][square] * sign;
+    end_psqt -= end_tables[p % 6][square] * sign;
+    phase -= phase_weights[p];
+  }
 
   inline bool is_white_to_move() const { return white_to_move; }
   inline bool is_same_move(Move &a, Move &b)
@@ -50,7 +73,7 @@ public:
       return false;
     return true;
   }
-  
+
   inline void update_position()
   {
     white_pieces = bitboards[wPawn] | bitboards[wKnight] | bitboards[wBishop] | bitboards[wRook] | bitboards[wQueen] | bitboards[wKing];

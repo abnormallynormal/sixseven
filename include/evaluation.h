@@ -1,8 +1,7 @@
 #pragma once
 #include "board.h"
-#include "pieceSquareTables.h"
+#include "evalConstants.h"
 
-const int piece_vals[] = {100, 300, 310, 500, 900, -1, 100, 300, 310, 500, 900, -1};
 
 inline int count_pieces(Piece p, Board &board)
 {
@@ -16,14 +15,7 @@ inline int count_pieces(Piece p, Board &board)
   return count;
 }
 
-int material_odds(Board &board);
-
 void precompute_psqt(Board& board);
 
 int evaluate_position(Board& board);
 
-inline int evaluate(Board &board)
-{
-  int m = material_odds(board);
-  return board.white_to_move ? m : -m;
-}

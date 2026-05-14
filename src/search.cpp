@@ -65,7 +65,7 @@ int negamax(Board &board, MoveGenerator &move_gen, int alpha, int beta, int dept
   else if (entry_eval != NO_EVAL)
     static_eval = entry_eval;
   else
-    static_eval = evaluate(board);
+    static_eval = evaluate_position(board);
 
   // base case
   if (depth == 0)
@@ -236,7 +236,7 @@ int quiescence(Board &board, MoveGenerator &move_gen, int alpha, int beta, int p
 {
   if (depth >= 8)
   {
-    return (static_eval != NO_EVAL) ? static_eval : evaluate(board);
+    return (static_eval != NO_EVAL) ? static_eval : evaluate_position(board);
   }
 
   bool is_in_check = move_gen.is_in_check(board, board.is_white_to_move());
@@ -283,7 +283,7 @@ int quiescence(Board &board, MoveGenerator &move_gen, int alpha, int beta, int p
   }
   else
   {
-    int stand_pat = (static_eval != NO_EVAL) ? static_eval : evaluate(board);
+    int stand_pat = (static_eval != NO_EVAL) ? static_eval : evaluate_position(board);
     if (stand_pat > greatest_val)
       greatest_val = stand_pat;
     if (stand_pat > alpha)

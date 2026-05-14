@@ -8,6 +8,11 @@ void Board::unmake_move(Move &m)
   en_passant_square = m.prev_state.en_passant_square;
   half_move_count = m.prev_state.half_move_count;
   white_to_move = m.prev_state.white_to_move;
+  opening_material = m.prev_state.prev_opening_material;
+  opening_psqt = m.prev_state.prev_opening_psqt;
+  end_material = m.prev_state.prev_end_material;
+  end_psqt = m.prev_state.prev_end_psqt;
+  phase = m.prev_state.prev_phase;
 
   if (m.is_castling)
   {
