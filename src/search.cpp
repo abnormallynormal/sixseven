@@ -4,39 +4,79 @@
 #include "evaluation.h"
 #include <climits>
 #include <algorithm>
+#include <cstring>
+
+const SearchConfig DEFAULT_CONFIG;
 
 Move killer_table[2][256];
-int history_table[12][64]; // remember to reset
+int history_table[12][64];
 
-int score_move(Board &board, Move m, int ply)
+std::atomic<u64> g_node_count{0};
+
+std::atomic<u64> g_cutoff_count{0};
+std::atomic<u64> g_cutoff_index_sum{0};
+std::atomic<u64> g_cutoff_first_count{0};
+std::atomic<u64> g_cutoff_by_index[CUTOFF_HIST_SIZE];
+
+void reset_killer_table()
+{
+  for (int i = 0; i < 2; i++)
+    for (int j = 0; j < 256; j++)
+      killer_table[i][j] = Move();
+}
+
+void reset_history_table()
+{
+  for (int i = 0; i < 12; i++)
+    for (int j = 0; j < 64; j++)
+      history_table[i][j] = 0;
+}
+
+void reset_tt()
+{
+  std::memset(table, 0, sizeof(HashEntry) * table_size);
+}
+
+void reset_search_state()
+{
+  reset_killer_table();
+  reset_history_table();
+  reset_tt();
+  reset_node_count();
+  reset_cutoff_stats();
+  reset_tt_stats();
+}
+
+int score_move(Board &board, Move m, int ply, const SearchConfig &cfg)
 {
   if (board.squares[m.to] != EMPTY)
   {
-
-    return mvv_lva(board.squares[m.from], board.squares[m.to]);
+    if (cfg.use_mvv_lva)
+      return mvv_lva(board.squares[m.from], board.squares[m.to]);
+    return 0;
   }
-  if (board.is_same_move(m, killer_table[0][ply]))
-  {
+  if (cfg.use_killer && board.is_same_move(m, killer_table[0][ply]))
     return 90000;
-  }
-  if (board.is_same_move(m, killer_table[1][ply]))
-  {
+  if (cfg.use_killer && board.is_same_move(m, killer_table[1][ply]))
     return 80000;
-  }
-  else
+  if (cfg.use_history)
     return history_table[board.squares[m.from]][m.to];
+  return 0;
 }
 
-int mvv_lva(Piece attack, Piece victim) { return piece_vals[victim] - piece_vals[attack]; }
+int mvv_lva(Piece attack, Piece victim) { return (piece_vals[victim] - piece_vals[attack]) * 100000; }
 
-int negamax(Board &board, MoveGenerator &move_gen, int alpha, int beta, int depth, int ply, bool can_null)
+int negamax(Board &board, MoveGenerator &move_gen, int alpha, int beta, int depth, int ply, bool can_null, const SearchConfig &cfg)
 {
+  g_node_count.fetch_add(1, std::memory_order_relaxed);
+
   int original_alpha = alpha;
   Move best_move;
-  // probe table
-  int entry_score, entry_eval;
+  int entry_score = 0;
+  int entry_eval = NO_EVAL;
   Move entry_move;
-  if (probe_entry(board.hash, depth, alpha, beta, ply, entry_score, entry_eval, entry_move))
+  bool tt_hit = probe_entry(board.hash, depth, alpha, beta, ply, entry_score, entry_eval, entry_move);
+  if (tt_hit && cfg.use_tt)
   {
     return entry_score;
   }
@@ -47,23 +87,27 @@ int negamax(Board &board, MoveGenerator &move_gen, int alpha, int beta, int dept
   {
     static_eval = NO_EVAL;
   }
-  else if (entry_eval != NO_EVAL)
+  else if (cfg.use_static_eval_cache && entry_eval != NO_EVAL)
     static_eval = entry_eval;
   else
     static_eval = evaluate(board);
 
   // base case
   if (depth == 0)
-    return quiescence(board, move_gen, alpha, beta, ply, static_eval);
+  {
+    if (cfg.use_quiescence)
+      return quiescence(board, move_gen, alpha, beta, ply, static_eval, 0, cfg);
+    return (static_eval != NO_EVAL) ? static_eval : evaluate(board);
+  }
 
   // null move pruning
-  if (!is_in_check && depth >= 3 && beta < MATE_THRESHOLD - 256 && board.has_piece_material() && can_null)
+  if (cfg.use_nmp && !is_in_check && depth >= 3 && (beta < MATE_THRESHOLD - 256 || beta > MATE_THRESHOLD) && board.has_piece_material() && can_null)
   {
     if (static_eval >= beta)
     {
       Undo undo_null;
       board.make_null_move(undo_null);
-      int score = -negamax(board, move_gen, -beta, -beta + 1, depth - (2 + depth / 6) - 1, ply + 1, false);
+      int score = -negamax(board, move_gen, -beta, -beta + 1, depth - (2 + depth / 6) - 1, ply + 1, false, cfg);
       board.unmake_null_move(undo_null);
       if (score >= beta)
         return score;
@@ -76,13 +120,16 @@ int negamax(Board &board, MoveGenerator &move_gen, int alpha, int beta, int dept
   int scores[218] = {0};
   for (int i = 0; i < move_gen.move_lists[ply].count; i++)
   {
-    if (board.is_same_move(move_gen.move_lists[ply].moves[i], entry_move))
+    if (cfg.use_tt && board.is_same_move(move_gen.move_lists[ply].moves[i], entry_move))
       scores[i] = INT_MAX;
     else
-      scores[i] = score_move(board, move_gen.move_lists[ply].moves[i], ply);
+      scores[i] = score_move(board, move_gen.move_lists[ply].moves[i], ply, cfg);
   }
 
   // recursive call
+  int legal_moves_tried = 0;
+  Move quiets_searched[218];
+  int quiets_count = 0;
   for (int i = 0; i < move_gen.move_lists[ply].count; i++)
   {
     int best = i;
@@ -103,26 +150,29 @@ int negamax(Board &board, MoveGenerator &move_gen, int alpha, int beta, int dept
       board.unmake_move(m);
       continue;
     }
+    legal_moves_tried++;
 
     bool move_is_check = move_gen.is_in_check(board, board.is_white_to_move());
     bool move_is_capture = !(m.prev_state.captured_piece == EMPTY);
 
     int score;
 
-    bool reducible = (i >= LMR_MIN_INDEX) && (depth >= LMR_MIN_DEPTH) && !move_is_check && !is_in_check && !move_is_capture && m.promotion_piece == EMPTY && !board.is_same_move(m, killer_table[0][ply]) && !board.is_same_move(m, killer_table[1][ply]);
+    bool is_killer = cfg.use_killer && (board.is_same_move(m, killer_table[0][ply]) || board.is_same_move(m, killer_table[1][ply]));
+    bool reducible = cfg.use_lmr && (i >= LMR_MIN_INDEX) && (depth >= LMR_MIN_DEPTH) && !move_is_check && !is_in_check && !move_is_capture && m.promotion_piece == EMPTY && !is_killer;
 
     if (reducible)
     {
-      int R = 1;
-      score = -negamax(board, move_gen, -alpha - 1, -alpha, depth - 1 - R, ply + 1, true);
+      int R = 1 + (depth / 3) + (i / 6);
+      R = std::min(R, depth - 1);
+      score = -negamax(board, move_gen, -alpha - 1, -alpha, depth - 1 - R, ply + 1, true, cfg);
       if (score > alpha)
       {
-        score = -negamax(board, move_gen, -beta, -alpha, depth - 1, ply + 1, true);
+        score = -negamax(board, move_gen, -beta, -alpha, depth - 1, ply + 1, true, cfg);
       }
     }
     else
     {
-      score = -negamax(board, move_gen, -beta, -alpha, depth - 1, ply + 1, true);
+      score = -negamax(board, move_gen, -beta, -alpha, depth - 1, ply + 1, true, cfg);
     }
 
     if (score > greatest_value)
@@ -136,14 +186,41 @@ int negamax(Board &board, MoveGenerator &move_gen, int alpha, int beta, int dept
     }
     if (score >= beta)
     {
+      g_cutoff_count.fetch_add(1, std::memory_order_relaxed);
+      g_cutoff_index_sum.fetch_add(legal_moves_tried, std::memory_order_relaxed);
+      if (legal_moves_tried == 1)
+        g_cutoff_first_count.fetch_add(1, std::memory_order_relaxed);
+      {
+        int idx = legal_moves_tried < CUTOFF_HIST_SIZE ? legal_moves_tried : CUTOFF_HIST_SIZE - 1;
+        g_cutoff_by_index[idx].fetch_add(1, std::memory_order_relaxed);
+      }
       if (!move_is_capture)
       {
-        killer_table[1][ply] = killer_table[0][ply];
-        killer_table[0][ply] = m;
-        history_table[board.squares[m.to]][m.to] += depth * depth;
+        if (cfg.use_killer)
+        {
+          killer_table[1][ply] = killer_table[0][ply];
+          killer_table[0][ply] = m;
+        }
+        if (cfg.use_history)
+        {
+          int bonus = 300 * depth - 250;
+          history_table[board.squares[m.to]][m.to] += bonus;
+          history_table[board.squares[m.to]][m.to] = std::clamp(history_table[board.squares[m.to]][m.to], -30000, 30000);
+          for (int q = 0; q < quiets_count; q++)
+          {
+            int &h = history_table[board.squares[quiets_searched[q].from]][quiets_searched[q].to];
+            h -= bonus;
+            h = std::clamp(h, -30000, 30000);
+          }
+        }
       }
       board.unmake_move(m);
       break;
+    }
+    if (!move_is_capture && m.promotion_piece == EMPTY)
+    {
+      quiets_searched[quiets_count] = m;
+      quiets_count++;
     }
     board.unmake_move(m);
   }
@@ -160,18 +237,22 @@ int negamax(Board &board, MoveGenerator &move_gen, int alpha, int beta, int dept
   }
 
   // store table
-  int node_type;
-  if (greatest_value <= original_alpha)
-    node_type = UPPER;
-  else if (greatest_value >= beta)
-    node_type = LOWER;
-  else
-    node_type = EXACT;
-  store_entry(board.hash, greatest_value, depth, best_move, node_type, ply, static_eval);
+  if (cfg.use_tt)
+  {
+    int node_type;
+    if (greatest_value <= original_alpha)
+      node_type = UPPER;
+    else if (greatest_value >= beta)
+      node_type = LOWER;
+    else
+      node_type = EXACT;
+    int eval_to_store = cfg.use_static_eval_cache ? static_eval : NO_EVAL;
+    store_entry(board.hash, greatest_value, depth, best_move, node_type, ply, eval_to_store);
+  }
   return greatest_value;
 }
 
-Move root_negamax(Board &board, MoveGenerator &move_gen, int depth)
+Move root_negamax(Board &board, MoveGenerator &move_gen, int depth, const SearchConfig &cfg)
 {
   Move best_move;
   int best_score = -INF;
@@ -181,7 +262,12 @@ Move root_negamax(Board &board, MoveGenerator &move_gen, int depth)
   {
     Move m = move_gen.move_lists[0].moves[i];
     board.make_move(m);
-    int score = -negamax(board, move_gen, -INF, INF, depth - 1, 1, true);
+    if (move_gen.is_in_check(board, !board.is_white_to_move()))
+    {
+      board.unmake_move(m);
+      continue;
+    }
+    int score = -negamax(board, move_gen, -INF, INF, depth - 1, 1, true, cfg);
     board.unmake_move(m);
 
     if (score > best_score)
@@ -193,34 +279,48 @@ Move root_negamax(Board &board, MoveGenerator &move_gen, int depth)
   return best_move;
 }
 
-int quiescence(Board &board, MoveGenerator &move_gen, int alpha, int beta, int ply, int static_eval)
+int quiescence(Board &board, MoveGenerator &move_gen, int alpha, int beta, int ply, int static_eval, int depth, const SearchConfig &cfg)
 {
+  g_node_count.fetch_add(1, std::memory_order_relaxed);
+
+  if (depth >= 8)
+  {
+    return (static_eval != NO_EVAL) ? static_eval : evaluate(board);
+  }
+
   bool is_in_check = move_gen.is_in_check(board, board.is_white_to_move());
   int greatest_val = -INF;
-  if (!is_in_check)
-  {
-    int stand_pat = (static_eval != NO_EVAL) ? static_eval : evaluate(board);
-    if (stand_pat > greatest_val)
-      greatest_val = stand_pat;
-    if (stand_pat > alpha)
-      alpha = stand_pat;
-    if (stand_pat >= beta)
-      return stand_pat;
-  }
 
   if (is_in_check)
   {
+    int scores[218] = {0};
     move_gen.generate_moves(board, ply);
+
     for (int i = 0; i < move_gen.move_lists[ply].count; i++)
     {
+      scores[i] = score_move(board, move_gen.move_lists[ply].moves[i], ply, cfg);
+    }
+
+    for (int i = 0; i < move_gen.move_lists[ply].count; i++)
+    {
+      int best = i;
+      for (int j = i + 1; j < move_gen.move_lists[ply].count; j++)
+      {
+        if (scores[j] > scores[best])
+          best = j;
+      }
+      std::swap(scores[i], scores[best]);
+      std::swap(move_gen.move_lists[ply].moves[i], move_gen.move_lists[ply].moves[best]);
+
       Move m = move_gen.move_lists[ply].moves[i];
       board.make_move(m);
+
       if (move_gen.is_in_check(board, !board.is_white_to_move()))
       {
         board.unmake_move(m);
         continue;
       }
-      int score = -quiescence(board, move_gen, -beta, -alpha, ply + 1, NO_EVAL);
+      int score = -quiescence(board, move_gen, -beta, -alpha, ply + 1, NO_EVAL, depth + 1, cfg);
       board.unmake_move(m);
       if (score >= beta)
         return score;
@@ -232,17 +332,44 @@ int quiescence(Board &board, MoveGenerator &move_gen, int alpha, int beta, int p
   }
   else
   {
+    int stand_pat = (static_eval != NO_EVAL) ? static_eval : evaluate(board);
+    if (stand_pat > greatest_val)
+      greatest_val = stand_pat;
+    if (stand_pat > alpha)
+      alpha = stand_pat;
+    if (stand_pat >= beta)
+      return stand_pat;
+
+    int scores[218] = {0};
     move_gen.generate_captures(board, ply);
+
     for (int i = 0; i < move_gen.move_lists[ply].count; i++)
     {
+      scores[i] = score_move(board, move_gen.move_lists[ply].moves[i], ply, cfg);
+    }
+
+    for (int i = 0; i < move_gen.move_lists[ply].count; i++)
+    {
+      int best = i;
+      for (int j = i + 1; j < move_gen.move_lists[ply].count; j++)
+      {
+        if (scores[j] > scores[best])
+          best = j;
+      }
+      std::swap(scores[i], scores[best]);
+      std::swap(move_gen.move_lists[ply].moves[i], move_gen.move_lists[ply].moves[best]);
+
       Move m = move_gen.move_lists[ply].moves[i];
+      int captured_val = piece_vals[board.squares[m.to]];
+      if (m.promotion_piece == EMPTY && stand_pat + captured_val + 200 < alpha)
+        continue;
       board.make_move(m);
       if (move_gen.is_in_check(board, !board.is_white_to_move()))
       {
         board.unmake_move(m);
         continue;
       }
-      int score = -quiescence(board, move_gen, -beta, -alpha, ply + 1, NO_EVAL);
+      int score = -quiescence(board, move_gen, -beta, -alpha, ply + 1, NO_EVAL, depth + 1, cfg);
       board.unmake_move(m);
       if (score >= beta)
         return score;

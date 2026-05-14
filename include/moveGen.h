@@ -9,7 +9,7 @@ class Board;
 class MoveGenerator
 {
 public:
-  MoveList move_lists[64];
+  MoveList move_lists[256];
   int current_ply;
   MoveGenerator();
   ~MoveGenerator();
