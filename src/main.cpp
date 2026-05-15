@@ -1,6 +1,5 @@
 #include "board.h"
 #include "moveGen.h"
-#include "perft.h"
 #include "uci.h"
 #include <iostream>
 

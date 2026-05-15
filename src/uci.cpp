@@ -4,6 +4,7 @@
 #include <vector>
 #include <atomic>
 #include <thread>
+#include <chrono>
 #include "search.h"
 #include "moveGen.h"
 #include "perft.h"
@@ -74,7 +75,8 @@ void uci_loop(Board &board, MoveGenerator &mg)
 
 void position_handler(std::vector<std::string> str, Board &board)
 {
-  if (str.size() < 2) return;
+  if (str.size() < 2)
+    return;
   board.reset_board();
   std::string setup_type = str[1];
   int moves_index = -1;
@@ -88,11 +90,19 @@ void position_handler(std::vector<std::string> str, Board &board)
   }
   if (setup_type == "fen")
   {
-    if (str.size() < 6) return;
+    if (str.size() < 6)
+      return;
     int ply = 0;
     if ((moves_index == -1 || moves_index > 6) && str.size() > 6)
     {
-      try { ply = std::stoi(str[6]); } catch (...) { ply = 0; }
+      try
+      {
+        ply = std::stoi(str[6]);
+      }
+      catch (...)
+      {
+        ply = 0;
+      }
     }
     fen_parser(str[2], str[3], str[4], str[5], ply, board);
     if (moves_index != -1)
@@ -120,19 +130,104 @@ void position_handler(std::vector<std::string> str, Board &board)
 void go_handler(std::vector<std::string> str, std::atomic<bool> &stop_flag, std::thread &search, Board &board, MoveGenerator &mg)
 {
   int depth = 64;
-  for (size_t i = 1; i + 1 < str.size(); i++)
+
+  int wtime = 0;
+  int btime = 0;
+  int winc = 0;
+  int binc = 0;
+
+  int player_time;
+  int opp_time;
+  int player_inc;
+  int opp_inc;
+
+  for (int i = 1; i + 1 < str.size(); i++)
   {
     if (str[i] == "depth")
     {
-      try { depth = std::stoi(str[i + 1]); } catch (...) {}
-      break;
+      try
+      {
+        depth = std::stoi(str[i + 1]);
+      }
+      catch (...)
+      {
+      }
+    }
+    else if (str[i] == "wtime")
+    {
+      try
+      {
+        wtime = std::stoi(str[i + 1]);
+      }
+      catch (...)
+      {
+      }
+    }
+    else if (str[i] == "btime")
+    {
+      try
+      {
+        btime = std::stoi(str[i + 1]);
+      }
+      catch (...)
+      {
+      }
+    }
+    else if (str[i] == "winc")
+    {
+      try
+      {
+        winc = std::stoi(str[i + 1]);
+      }
+      catch (...)
+      {
+      }
+    }
+    else if (str[i] == "binc")
+    {
+      try
+      {
+        binc = std::stoi(str[i + 1]);
+      }
+      catch (...)
+      {
+      }
     }
   }
 
-  //parse str
+  if (board.is_white_to_move())
+  {
+    player_time = wtime;
+    opp_time = btime;
+    player_inc = winc;
+    opp_inc = binc;
+  }
+  else
+  {
+    player_time = btime;
+    opp_time = wtime;
+    player_inc = binc;
+    opp_inc = winc;
+  }
 
-  search = std::thread([&, depth]() {
-    Move best = iterative_deepening(board, mg, depth, stop_flag);
+  int time_allotted = player_time / 30 + player_inc / 2;
+  auto start = std::chrono::steady_clock::now();
+  search = std::thread([&, depth, start, time_allotted]()
+                       {
+    std::thread timer([&, time_allotted]() {
+      auto deadline = std::chrono::steady_clock::now()
+                    + std::chrono::milliseconds(time_allotted);
+      while (!stop_flag.load(std::memory_order_relaxed) &&
+             std::chrono::steady_clock::now() < deadline) {
+        std::this_thread::sleep_for(std::chrono::milliseconds(2));
+      }
+      stop_flag.store(true);
+    });
+
+    int depth_searched = 0;
+    Move best = iterative_deepening(board, mg, depth, stop_flag, depth_searched, start, time_allotted);
+    stop_flag.store(true);
+    timer.join();
     std::cout << "bestmove " << move_to_string(best, board) << "\n";
-  });
+    std::cout << "depth searched " << depth_searched << "\n"; });
 }

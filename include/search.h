@@ -3,6 +3,8 @@
 #include "board.h"
 #include "moveGen.h"
 #include "types.h"
+#include <atomic>
+#include <chrono>
 
 extern Move killer_table[2][256];
 extern int history_table[12][64];
@@ -26,15 +28,23 @@ int score_move(Board &board, Move m, int ply);
 
 int mvv_lva(Piece attack, Piece victim);
 
-int quiescence(Board &board, MoveGenerator &move_gen, int alpha, int beta, int ply, int static_eval, int depth);
+int quiescence(Board &board, MoveGenerator &move_gen, int alpha, int beta, int ply, int static_eval, int depth, std::atomic<bool> &stop_flag);
 
-inline Move iterative_deepening(Board &board, MoveGenerator &move_gen, int max_depth, std::atomic<bool> &stop_flag)
+inline Move iterative_deepening(Board &board, MoveGenerator &move_gen, int max_depth, std::atomic<bool> &stop_flag, int &depth_search, std::chrono::steady_clock::time_point start, int time_allotted)
 {
   Move best_move;
   for (int i = 1; i <= max_depth; i++)
   {
     Move m = root_negamax(board, move_gen, i, stop_flag);
-    if(!stop_flag.load()) best_move = m;
+    if (!stop_flag.load())
+    {
+      best_move = m;
+      depth_search = i;
+    }
+    auto time = std::chrono::steady_clock::now();
+    if((std::chrono::duration_cast<std::chrono::milliseconds>(time - start).count() * 10) > 6 * time_allotted){
+      break;
+    }
     for (int p = 0; p < 12; p++)
     {
       for (int s = 0; s < 64; s++)

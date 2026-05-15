@@ -46,6 +46,8 @@ int mvv_lva(Piece attack, Piece victim) { return (piece_vals[victim] - piece_val
 
 int negamax(Board &board, MoveGenerator &move_gen, int alpha, int beta, int depth, int ply, bool can_null, std::atomic<bool> &stop_flag)
 {
+  if(board.half_move_count >= 100) return 0;
+
   int original_alpha = alpha;
   Move best_move;
   int entry_score = 0;
@@ -71,7 +73,7 @@ int negamax(Board &board, MoveGenerator &move_gen, int alpha, int beta, int dept
   // base case
   if (depth == 0)
   {
-    return quiescence(board, move_gen, alpha, beta, ply, static_eval, 0);
+    return quiescence(board, move_gen, alpha, beta, ply, static_eval, 0, stop_flag);
   }
 
   if (stop_flag.load(std::memory_order_relaxed))
@@ -217,6 +219,8 @@ Move root_negamax(Board &board, MoveGenerator &move_gen, int depth, std::atomic<
   move_gen.generate_moves(board, 0);
   for (int i = 0; i < move_gen.move_lists[0].count; i++)
   {
+    if (stop_flag.load(std::memory_order_relaxed))
+      break;
     Move m = move_gen.move_lists[0].moves[i];
     board.make_move(m);
     if (move_gen.is_in_check(board, !board.is_white_to_move()))
@@ -236,8 +240,10 @@ Move root_negamax(Board &board, MoveGenerator &move_gen, int depth, std::atomic<
   return best_move;
 }
 
-int quiescence(Board &board, MoveGenerator &move_gen, int alpha, int beta, int ply, int static_eval, int depth)
+int quiescence(Board &board, MoveGenerator &move_gen, int alpha, int beta, int ply, int static_eval, int depth, std::atomic<bool> &stop_flag)
 {
+  if (stop_flag.load(std::memory_order_relaxed))
+    return 0;
   if (depth >= 8)
   {
     return (static_eval != NO_EVAL) ? static_eval : evaluate_position(board);
@@ -275,7 +281,7 @@ int quiescence(Board &board, MoveGenerator &move_gen, int alpha, int beta, int p
         board.unmake_move(m);
         continue;
       }
-      int score = -quiescence(board, move_gen, -beta, -alpha, ply + 1, NO_EVAL, depth + 1);
+      int score = -quiescence(board, move_gen, -beta, -alpha, ply + 1, NO_EVAL, depth + 1, stop_flag);
       board.unmake_move(m);
       if (score >= beta)
         return score;
@@ -324,7 +330,7 @@ int quiescence(Board &board, MoveGenerator &move_gen, int alpha, int beta, int p
         board.unmake_move(m);
         continue;
       }
-      int score = -quiescence(board, move_gen, -beta, -alpha, ply + 1, NO_EVAL, depth + 1);
+      int score = -quiescence(board, move_gen, -beta, -alpha, ply + 1, NO_EVAL, depth + 1, stop_flag);
       board.unmake_move(m);
       if (score >= beta)
         return score;
