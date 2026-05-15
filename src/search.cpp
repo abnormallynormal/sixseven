@@ -3,6 +3,7 @@
 #include "searchConstants.h"
 #include "evaluation.h"
 #include <climits>
+#include <atomic>
 #include <algorithm>
 
 Move killer_table[2][256];
@@ -43,7 +44,7 @@ int score_move(Board &board, Move m, int ply)
 
 int mvv_lva(Piece attack, Piece victim) { return (piece_vals[victim] - piece_vals[attack]) * 100000; }
 
-int negamax(Board &board, MoveGenerator &move_gen, int alpha, int beta, int depth, int ply, bool can_null)
+int negamax(Board &board, MoveGenerator &move_gen, int alpha, int beta, int depth, int ply, bool can_null, std::atomic<bool> &stop_flag)
 {
   int original_alpha = alpha;
   Move best_move;
@@ -73,6 +74,9 @@ int negamax(Board &board, MoveGenerator &move_gen, int alpha, int beta, int dept
     return quiescence(board, move_gen, alpha, beta, ply, static_eval, 0);
   }
 
+  if (stop_flag.load(std::memory_order_relaxed))
+    return 0;
+
   // null move pruning
   if (!is_in_check && depth >= 3 && (beta < MATE_THRESHOLD - 256 || beta > MATE_THRESHOLD) && board.has_piece_material() && can_null)
   {
@@ -80,7 +84,7 @@ int negamax(Board &board, MoveGenerator &move_gen, int alpha, int beta, int dept
     {
       Undo undo_null;
       board.make_null_move(undo_null);
-      int score = -negamax(board, move_gen, -beta, -beta + 1, depth - (2 + depth / 6) - 1, ply + 1, false);
+      int score = -negamax(board, move_gen, -beta, -beta + 1, depth - (2 + depth / 6) - 1, ply + 1, false, stop_flag);
       board.unmake_null_move(undo_null);
       if (score >= beta)
         return score;
@@ -135,15 +139,15 @@ int negamax(Board &board, MoveGenerator &move_gen, int alpha, int beta, int dept
     {
       int R = 1 + (depth / 3) + (i / 6);
       R = std::min(R, depth - 1);
-      score = -negamax(board, move_gen, -alpha - 1, -alpha, depth - 1 - R, ply + 1, true);
+      score = -negamax(board, move_gen, -alpha - 1, -alpha, depth - 1 - R, ply + 1, true, stop_flag);
       if (score > alpha)
       {
-        score = -negamax(board, move_gen, -beta, -alpha, depth - 1, ply + 1, true);
+        score = -negamax(board, move_gen, -beta, -alpha, depth - 1, ply + 1, true, stop_flag);
       }
     }
     else
     {
-      score = -negamax(board, move_gen, -beta, -alpha, depth - 1, ply + 1, true);
+      score = -negamax(board, move_gen, -beta, -alpha, depth - 1, ply + 1, true, stop_flag);
     }
 
     if (score > greatest_value)
@@ -205,7 +209,7 @@ int negamax(Board &board, MoveGenerator &move_gen, int alpha, int beta, int dept
   return greatest_value;
 }
 
-Move root_negamax(Board &board, MoveGenerator &move_gen, int depth)
+Move root_negamax(Board &board, MoveGenerator &move_gen, int depth, std::atomic<bool> &stop_flag)
 {
   Move best_move;
   int best_score = -INF;
@@ -220,7 +224,7 @@ Move root_negamax(Board &board, MoveGenerator &move_gen, int depth)
       board.unmake_move(m);
       continue;
     }
-    int score = -negamax(board, move_gen, -INF, INF, depth - 1, 1, true);
+    int score = -negamax(board, move_gen, -INF, INF, depth - 1, 1, true, stop_flag);
     board.unmake_move(m);
 
     if (score > best_score)

@@ -2,11 +2,17 @@
 #include <iostream>
 #include <string>
 #include <vector>
+#include <atomic>
+#include <thread>
 #include "search.h"
 #include "moveGen.h"
+#include "perft.h"
 
 void uci_loop(Board &board, MoveGenerator &mg)
 {
+  std::atomic<bool> stop_flag = false;
+  std::thread search_thread;
+
   std::string cmd;
   std::vector<std::string> split_cmd;
   while (std::getline(std::cin, cmd))
@@ -34,10 +40,30 @@ void uci_loop(Board &board, MoveGenerator &mg)
     }
     else if (header == "go")
     {
+      if (search_thread.joinable())
+      {
+        stop_flag = true;
+        search_thread.join();
+      }
+      stop_flag = false;
+      go_handler(split_cmd, stop_flag, search_thread, board, mg);
     }
     else if (header == "quit")
     {
+      stop_flag = true;
+      if (search_thread.joinable())
+      {
+        search_thread.join();
+      }
       break;
+    }
+    else if (header == "stop")
+    {
+      stop_flag = true;
+      if (search_thread.joinable())
+      {
+        search_thread.join();
+      }
     }
     else
     {
@@ -89,4 +115,24 @@ void position_handler(std::vector<std::string> str, Board &board)
       }
     }
   }
+}
+
+void go_handler(std::vector<std::string> str, std::atomic<bool> &stop_flag, std::thread &search, Board &board, MoveGenerator &mg)
+{
+  int depth = 64;
+  for (size_t i = 1; i + 1 < str.size(); i++)
+  {
+    if (str[i] == "depth")
+    {
+      try { depth = std::stoi(str[i + 1]); } catch (...) {}
+      break;
+    }
+  }
+
+  //parse str
+
+  search = std::thread([&, depth]() {
+    Move best = iterative_deepening(board, mg, depth, stop_flag);
+    std::cout << "bestmove " << move_to_string(best, board) << "\n";
+  });
 }

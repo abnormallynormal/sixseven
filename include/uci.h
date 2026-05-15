@@ -8,7 +8,7 @@
 
 void uci_loop(Board &board, MoveGenerator &mg);
 
-void go_handler(std::vector<std::string> str);
+void go_handler(std::vector<std::string> str, std::atomic<bool> &stop_flag, std::thread &search, Board &board, MoveGenerator &mg);
 
 void position_handler(std::vector<std::string> str, Board &board);
 
