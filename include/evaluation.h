@@ -30,6 +30,8 @@ inline u64 compute_neighboring_files(int sq){
 
 u64 compute_passed_pawn_mask(Board& board, int sq, bool white);
 
+int evaluate_pawn_struct(Board &board);
+
 int evaluate_passed_pawns(Board &board);
 
 int evaluate_isolated_pawns(Board &board);

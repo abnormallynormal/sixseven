@@ -36,8 +36,7 @@ int evaluate_position(Board &board)
 
   int eval = ((opening_eval * phase + end_eval * (24 - phase)) / 24) + TEMPO_BONUS;
   
-  eval += 0.5 * evaluate_passed_pawns(board);
-  eval += evaluate_isolated_pawns(board);
+  eval += evaluate_pawn_struct(board);
   
   if (!board.is_white_to_move())
     eval *= -1;
@@ -51,58 +50,57 @@ u64 compute_passed_pawn_mask(Board &board, int sq, bool white)
   return ranks_ahead && compute_neighboring_files(sq);
 }
 
-int evaluate_isolated_pawns(Board &board){
+int evaluate_pawn_struct(Board &board){
   u64 white = board.bitboards[wPawn];
   u64 black = board.bitboards[bPawn];
-  int total_w = 0;
-  int total_b = 0;
+  int eval = 0;
+  int total_w_isolated = 0;
+  int total_b_isolated = 0;
+  int passed_eval = 0;
+  int doubled = 0;
   while (white)
   {
     int pawn = __builtin_ctzll(white);
-    u64 mask = compute_neighboring_files(pawn);
-    if (mask && ~white)
+    u64 neighbors = compute_neighboring_files(pawn);
+    if (neighbors && ~white)
     {
-      total_w++;
+      total_w_isolated++;
     }
     white &= white - 1;
+    u64 passed_mask = compute_passed_pawn_mask(board, pawn, true);
+    if (passed_mask && ~black)
+    {
+      passed_eval += passed_pawn_bonuses[pawn / 8];
+    }
+    u64 file = 0x1010101010101010 << (pawn % 8);
+    u64 file_without_pawn = file && ~(1ULL << pawn);
+    if(file_without_pawn && white) {
+      doubled++;
+    }
   }
   while (black)
   {
     int pawn = __builtin_ctzll(black);
-    u64 mask = compute_neighboring_files(pawn);
-    if (mask && ~white)
+    u64 neighbors = compute_neighboring_files(pawn);
+    if (neighbors && ~white)
     {
-      total_b++;
+      total_b_isolated++;
+    }
+    u64 passed_mask = compute_passed_pawn_mask(board, pawn, false);
+    if (passed_mask && ~white)
+    {
+      passed_eval -= passed_pawn_bonuses[7 - pawn / 8];
     }
     black &= black - 1;
-  }
-  return isolated_pawn_maluses[total_w] - isolated_pawn_maluses[total_b];
-}
-
-int evaluate_passed_pawns(Board &board)
-{
-  u64 white = board.bitboards[wPawn];
-  u64 black = board.bitboards[bPawn];
-  int total = 0;
-  while (white)
-  {
-    int pawn = __builtin_ctzll(white);
-    u64 mask = compute_passed_pawn_mask(board, pawn, true);
-    if (mask && ~black)
+    u64 file = 0x1010101010101010 << (pawn % 8);
+    u64 file_without_pawn = file && ~(1ULL << pawn);
+    if (file_without_pawn && black)
     {
-      total += passed_pawn_bonuses[pawn / 8];
+      doubled--;
     }
-    white &= white - 1;
   }
-  while (black)
-  {
-    int pawn = __builtin_ctzll(black);
-    u64 mask = compute_passed_pawn_mask(board, pawn, false);
-    if (mask && ~white)
-    {
-      total -= passed_pawn_bonuses[7 - pawn / 8];
-    }
-    black &= black - 1;
-  }
-  return total;
+  eval += (isolated_pawn_maluses[total_w_isolated] - isolated_pawn_maluses[total_b_isolated]);
+  eval += 0.5 * passed_eval;
+  eval -= doubled * 20;
+  return eval;
 }
