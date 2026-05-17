@@ -5,6 +5,8 @@ const int opening_passed_pawn_bonuses[] = {0, 5, 10, 20, 35, 50, 60};
 const int end_passed_pawn_bonuses[] = {0, 15, 15, 25, 40, 70, 120};
 const int opening_isolated_pawn_maluses[] = {0, -10, -25, -50, -80, -85, -90, -95, -100};
 const int end_isolated_pawn_maluses[] = {0, -20, -45, -80, -120, -130, -140, -150, -160};
+const int opening_knight_outpost_bonuses[] = {0, 0, 0, 5, 15, 25, 15, 0};
+const int end_knight_outpost_bonuses[] = {0, 0, 0, 3, 5, 10, 5, 0};
 
 void precompute_eval(Board &board)
 {
@@ -41,6 +43,7 @@ int evaluate_position(Board &board)
   eval += evaluate_pawn_struct(board, phase);
   eval += evaluate_rooks(board, phase);
   eval += bishop_pair(board, phase);
+  eval += knight_outposts(board, phase);
 
   if (!board.is_white_to_move())
     eval *= -1;
@@ -179,4 +182,74 @@ int evaluate_rooks(Board &board, int phase)
   }
   int eval = ((opening_eval * phase + end_eval * (24 - phase)) / 24);
   return eval;
+}
+
+int knight_outposts(Board &board, int phase)
+{
+  u64 white = board.bitboards[wKnight];
+  u64 black = board.bitboards[bKnight];
+  int opening_eval = 0;
+  int end_eval = 0;
+  while (white)
+  {
+    int sq = __builtin_ctzll(white);
+    if (sq / 8 >= 3)
+    {
+      u64 ranks_ahead = ~0ULL << ((sq / 8 + 1) * 8);
+      u64 enemy_pawns = compute_neighboring_files(sq) & ranks_ahead & board.bitboards[bPawn];
+      if (enemy_pawns == 0)
+      {
+        opening_eval += opening_knight_outpost_bonuses[sq / 8];
+        end_eval += end_knight_outpost_bonuses[sq / 8];
+        if ((sq % 8 != 0 && sq % 8 != 7) && (board.squares[sq - 9] == wPawn || board.squares[sq - 7] == wPawn))
+        {
+          opening_eval += opening_knight_outpost_bonuses[sq / 8] / 2;
+          end_eval += end_knight_outpost_bonuses[sq / 8] / 2;
+        }
+        else if ((sq % 8 != 0) && (board.squares[sq - 9] == wPawn))
+        {
+          opening_eval += opening_knight_outpost_bonuses[sq / 8] / 2;
+          end_eval += end_knight_outpost_bonuses[sq / 8] / 2;
+        }
+        else if ((sq % 8 != 7) && (board.squares[sq - 7] == wPawn))
+        {
+          opening_eval += opening_knight_outpost_bonuses[sq / 8] / 2;
+          end_eval += end_knight_outpost_bonuses[sq / 8] / 2;
+        }
+      }
+    }
+    white &= white - 1;
+  }
+  while (black)
+  {
+    int sq = __builtin_ctzll(black);
+    if (sq / 8 <= 4)
+    {
+      int idx = 7 - sq / 8;
+      u64 ranks_ahead = (1ULL << (sq / 8 * 8)) - 1;
+      u64 enemy_pawns = compute_neighboring_files(sq) & ranks_ahead & board.bitboards[wPawn];
+      if (enemy_pawns == 0)
+      {
+        opening_eval -= opening_knight_outpost_bonuses[idx];
+        end_eval -= end_knight_outpost_bonuses[idx];
+        if ((sq % 8 != 0 && sq % 8 != 7) && (board.squares[sq + 9] == bPawn || board.squares[sq + 7] == bPawn))
+        {
+          opening_eval -= opening_knight_outpost_bonuses[idx] / 2;
+          end_eval -= end_knight_outpost_bonuses[idx] / 2;
+        }
+        else if ((sq % 8 != 0) && (board.squares[sq + 7] == bPawn))
+        {
+          opening_eval -= opening_knight_outpost_bonuses[idx] / 2;
+          end_eval -= end_knight_outpost_bonuses[idx] / 2;
+        }
+        else if ((sq % 8 != 7) && (board.squares[sq + 9] == bPawn))
+        {
+          opening_eval -= opening_knight_outpost_bonuses[idx] / 2;
+          end_eval -= end_knight_outpost_bonuses[idx] / 2;
+        }
+      }
+    }
+    black &= black - 1;
+  }
+  return (opening_eval * phase + end_eval * (24 - phase)) / 24;
 }

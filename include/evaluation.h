@@ -83,6 +83,8 @@ int evaluate_doubled_pawns(Board &board);
 
 int evaluate_rooks(Board &board, int phase);
 
+int knight_outposts(Board &board, int phase);
+
 inline int bishop_pair(Board &board, int phase)
 {
   int white_count = 0;
