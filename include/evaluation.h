@@ -4,6 +4,8 @@
 #include "transposition.h"
 #include <algorithm>
 
+const u64 a_file = 0x0101010101010101;
+
 inline int count_pieces(Piece p, Board &board)
 {
   int count = 0;
@@ -23,7 +25,6 @@ int evaluate_position(Board &board);
 inline u64 compute_neighboring_files(int sq)
 {
   int file = sq % 8;
-  u64 a_file = 0x0101010101010101;
   u64 file_left = (file > 0) ? (a_file << (file - 1)) : 0ULL;
   u64 file_right = (file < 7) ? (a_file << (file + 1)) : 0ULL;
   return file_left | file_right;
@@ -32,7 +33,6 @@ inline u64 compute_neighboring_files(int sq)
 inline bool is_semi_open_file(Board &board, int sq)
 {
   int file = sq % 8;
-  u64 a_file = 0x0101010101010101;
   u64 file_on = a_file << file;
   if ((board.bitboards[wPawn] & file_on) == 0)
     return true;
@@ -40,11 +40,18 @@ inline bool is_semi_open_file(Board &board, int sq)
     return true;
   return false;
 }
+inline bool is_semi_open_file(Board &board, u64 file)
+{
+  if ((board.bitboards[wPawn] & file) == 0)
+    return true;
+  if ((board.bitboards[bPawn] & file) == 0)
+    return true;
+  return false;
+}
 
 inline bool is_rook_on_semi(Board &board, int sq, bool white)
 {
   int file = sq % 8;
-  u64 a_file = 0x0101010101010101;
   u64 file_on = a_file << file;
   if ((board.bitboards[wPawn] & file_on) == 0 && white)
     return true;
@@ -62,9 +69,14 @@ inline bool is_rook_on_seventh(Board &board, int sq, bool white)
 inline bool is_open_file(Board &board, int sq)
 {
   int file = sq % 8;
-  u64 a_file = 0x0101010101010101;
   u64 file_on = a_file << file;
   if (((board.bitboards[wPawn] & file_on) == 0) && ((board.bitboards[bPawn] & file_on) == 0))
+    return true;
+  return false;
+}
+inline bool is_open_file(Board &board, u64 file)
+{
+  if (((board.bitboards[wPawn] & file) == 0) && ((board.bitboards[bPawn] & file) == 0))
     return true;
   return false;
 }
@@ -115,3 +127,7 @@ inline int bishop_pair(Board &board, int phase)
   }
   return (opening_eval * phase + end_eval * (24 - phase)) / 24;
 }
+
+int evaluate_king_safety(Board &board, int phase);
+
+int pawn_shield(Board &board, int sq, bool white, u64 file_on, u64 file_close, u64 file_far);

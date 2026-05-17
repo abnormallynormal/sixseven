@@ -29,6 +29,9 @@ public:
   int end_psqt;
   int phase;
 
+  bool white_castled;
+  bool black_castled;
+
   Board();
   void print_board();
 

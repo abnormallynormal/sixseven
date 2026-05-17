@@ -5,7 +5,7 @@
 
 void Board::make_move(Move &m)
 {
-  m.prev_state = Undo{hash, pawns_hash, castling_rights, en_passant_square, half_move_count, squares[m.to], white_to_move, opening_material, opening_psqt, end_material, end_psqt, phase};
+  m.prev_state = Undo{hash, pawns_hash, castling_rights, en_passant_square, half_move_count, squares[m.to], white_to_move, opening_material, opening_psqt, end_material, end_psqt, phase, white_castled, black_castled};
 
   hash ^= castling_randoms[castling_rights];
   if (en_passant_square != NO_SQUARE)
@@ -30,6 +30,8 @@ void Board::make_move(Move &m)
       remove_piece_eval(wRook, h1);
       add_piece_eval(wKing, g1);
       add_piece_eval(wRook, f1);
+      
+      white_castled = true;
     }
     else if (!m.is_kingside && white_to_move)
     {
@@ -49,6 +51,8 @@ void Board::make_move(Move &m)
       remove_piece_eval(wRook, a1);
       add_piece_eval(wKing, c1);
       add_piece_eval(wRook, d1);
+
+      white_castled = true;
     }
     else if (m.is_kingside && !white_to_move)
     {
@@ -67,6 +71,8 @@ void Board::make_move(Move &m)
       remove_piece_eval(bRook, h8);
       add_piece_eval(bKing, g8);
       add_piece_eval(bRook, f8);
+
+      black_castled = true;
     }
     else if (!m.is_kingside && !white_to_move)
     {
@@ -86,6 +92,8 @@ void Board::make_move(Move &m)
       remove_piece_eval(bRook, a8);
       add_piece_eval(bKing, c8);
       add_piece_eval(bRook, d8);
+
+      black_castled = true;
     }
   }
   else if (m.is_en_passant)

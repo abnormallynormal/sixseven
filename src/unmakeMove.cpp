@@ -16,6 +16,8 @@ void Board::unmake_move(Move &m)
   end_material = m.prev_state.prev_end_material;
   end_psqt = m.prev_state.prev_end_psqt;
   phase = m.prev_state.prev_phase;
+  white_castled = m.prev_state.prev_white_castled;
+  black_castled = m.prev_state.prev_black_castled;
 
   if (m.is_castling)
   {

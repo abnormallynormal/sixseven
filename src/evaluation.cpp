@@ -44,6 +44,7 @@ int evaluate_position(Board &board)
   eval += evaluate_rooks(board, phase);
   eval += bishop_pair(board, phase);
   eval += knight_outposts(board, phase);
+  eval += evaluate_king_safety(board, phase);
 
   if (!board.is_white_to_move())
     eval *= -1;
@@ -53,7 +54,6 @@ int evaluate_position(Board &board)
 
 u64 compute_passed_pawn_mask(Board &board, int sq, bool white)
 {
-  u64 a_file = 0x0101010101010101;
   u64 file_on = a_file << (sq % 8);
   u64 ranks_ahead = white ? ~0ULL << ((sq / 8 + 1) * 8) : ~0ULL >> (64 - (sq / 8) * 8);
   return ranks_ahead & (compute_neighboring_files(sq) | file_on);
@@ -252,4 +252,235 @@ int knight_outposts(Board &board, int phase)
     black &= black - 1;
   }
   return (opening_eval * phase + end_eval * (24 - phase)) / 24;
+}
+
+int pawn_shield(Board &board, int sq, bool white, u64 file_on, u64 file_close, u64 file_far)
+{
+  int eval = 0;
+  if (white)
+  {
+    u64 pawns_on = file_on & board.bitboards[wPawn];
+    u64 pawns_far = file_far & board.bitboards[wPawn];
+    u64 pawns_close = file_close & board.bitboards[wPawn];
+    if (pawns_on == 0)
+      eval -= 30;
+    else
+    {
+      int pawn = __builtin_ctzll(pawns_on);
+      int rank = pawn / 8 - (sq + 8) / 8;
+      if (rank == 0)
+        eval += 15;
+      else if (rank == 1)
+        eval -= 10;
+      else if (rank == 2)
+        eval -= 20;
+    }
+    if (file_close != 0)
+    {
+      if (pawns_close == 0)
+        eval -= 15;
+      else
+      {
+        int pawn = __builtin_ctzll(pawns_close);
+        int rank = pawn / 8 - (sq + 8) / 8;
+        if (rank == 0)
+          eval += 5;
+        else if (rank == 1)
+          eval -= 5;
+        else if (rank == 2)
+          eval -= 10;
+      }
+    }
+    if (file_far != 0)
+    {
+      if (pawns_far == 0)
+        eval -= 15;
+      else
+      {
+        int pawn = __builtin_ctzll(pawns_far);
+        int rank = pawn / 8 - (sq + 8) / 8;
+        if (rank == 0)
+          eval += 10;
+        else if (rank == 1)
+          eval -= 10;
+        else if (rank == 2)
+          eval -= 15;
+      }
+    }
+  }
+  else
+  {
+    u64 pawns_on = file_on & board.bitboards[bPawn];
+    u64 pawns_far = file_far & board.bitboards[bPawn];
+    u64 pawns_close = file_close & board.bitboards[bPawn];
+    if (pawns_on == 0)
+      eval += 30;
+    else
+    {
+      int pawn = 63 - __builtin_clzll(pawns_on);
+      int rank = (sq - 8) / 8 - pawn / 8;
+      if (rank == 0)
+        eval -= 15;
+      else if (rank == 1)
+        eval += 10;
+      else if (rank == 2)
+        eval += 20;
+    }
+    if (file_close != 0)
+    {
+      if (pawns_close == 0)
+        eval += 15;
+      else
+      {
+        int pawn = 63 - __builtin_clzll(pawns_close);
+        int rank = (sq - 8) / 8 - pawn / 8;
+        if (rank == 0)
+          eval -= 5;
+        else if (rank == 1)
+          eval += 5;
+        else if (rank == 2)
+          eval += 10;
+      }
+    }
+    if (file_far != 0)
+    {
+      if (pawns_far == 0)
+        eval += 15;
+      else
+      {
+        int pawn = 63 - __builtin_clzll(pawns_far);
+        int rank = (sq - 8) / 8 - pawn / 8;
+        if (rank == 0)
+          eval -= 10;
+        else if (rank == 1)
+          eval += 10;
+        else if (rank == 2)
+          eval += 15;
+      }
+    }
+  }
+  return eval;
+}
+
+int evaluate_king_safety(Board &board, int phase)
+{
+  // castling rights check
+  int eval = 0;
+  if (board.white_castled)
+    eval += 25;
+  else if (!board.white_castled && (board.castling_rights & (wK | wQ) == 0))
+    eval -= 50;
+
+  int white = __builtin_ctzll(board.bitboards[wKing]);
+  bool white_kingside = (white % 8 >= 4) ? true : false;
+  u64 file_on = a_file << (white % 8);
+  u64 file_left = 0ULL;
+  u64 file_right = 0ULL;
+  if (white % 8 > 0)
+  {
+    file_left = a_file << (white & 8 - 1);
+  }
+  if (white % 8 < 7)
+  {
+    file_left = a_file << (white & 8 + 1);
+  }
+
+  // open files and shield
+  if (white_kingside)
+  {
+    if (white / 8 >= 6)
+      eval -= 25;
+    else
+    {
+      eval += pawn_shield(board, white, true, file_on, file_left, file_right);
+    }
+    if (is_open_file(board, file_left))
+      eval -= 20;
+    else if (is_semi_open_file(board, file_left))
+      eval -= 10;
+    if (is_open_file(board, file_on))
+      eval -= 40;
+    else if (is_semi_open_file(board, file_on))
+      eval -= 30;
+    if (is_open_file(board, file_right) && file_right != 0)
+      eval -= 30;
+    else if (is_semi_open_file(board, file_right) && file_right != 0)
+      eval -= 20;
+  }
+  else
+  {
+    eval += pawn_shield(board, white, true, file_on, file_right, file_left);
+    if (is_open_file(board, file_left) && file_left != 0)
+      eval -= 30;
+    else if (is_semi_open_file(board, file_left) && file_left != 0)
+      eval -= 20;
+    if (is_open_file(board, file_on))
+      eval -= 40;
+    else if (is_semi_open_file(board, file_on))
+      eval -= 30;
+    if (is_open_file(board, file_right))
+      eval -= 20;
+    else if (is_semi_open_file(board, file_right))
+      eval -= 10;
+  }
+
+  if (board.black_castled)
+    eval -= 25;
+  else if (!board.black_castled && (board.castling_rights & (bK | bQ) == 0))
+    eval += 50;
+
+  int black = __builtin_ctzll(board.bitboards[bKing]);
+  bool black_kingside = (black % 8 >= 4) ? true : false;
+  file_on = a_file << (black % 8);
+  file_left = 0ULL;
+  file_right = 0ULL;
+  if (black % 8 > 0)
+  {
+    file_left = a_file << (black & 8 - 1);
+  }
+  if (black % 8 < 7)
+  {
+    file_left = a_file << (black & 8 + 1);
+  }
+
+  // open files and shield
+  if (black_kingside)
+  {
+    if (black / 8 <= 1)
+      eval += 25;
+    else
+    {
+      eval -= pawn_shield(board, black, false, file_on, file_left, file_right);
+    }
+    if (is_open_file(board, file_left))
+      eval += 20;
+    else if (is_semi_open_file(board, file_left))
+      eval += 10;
+    if (is_open_file(board, file_on))
+      eval += 40;
+    else if (is_semi_open_file(board, file_on))
+      eval += 30;
+    if (is_open_file(board, file_right) && file_right != 0)
+      eval += 30;
+    else if (is_semi_open_file(board, file_right) && file_right != 0)
+      eval += 20;
+  }
+  else
+  {
+    eval -= pawn_shield(board, black, false, file_on, file_right, file_left);
+    if (is_open_file(board, file_left) && file_left != 0)
+      eval += 30;
+    else if (is_semi_open_file(board, file_left) && file_left != 0)
+      eval += 20;
+    if (is_open_file(board, file_on))
+      eval += 40;
+    else if (is_semi_open_file(board, file_on))
+      eval += 30;
+    if (is_open_file(board, file_right))
+      eval += 20;
+    else if (is_semi_open_file(board, file_right))
+      eval += 10;
+  }
+
+  return (eval * phase) / 24;
 }

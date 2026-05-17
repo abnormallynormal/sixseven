@@ -57,6 +57,10 @@ void Board::reset_board(){
   opening_psqt = 0;
   end_psqt = 0;
   phase = 0;
+
+  white_castled = false;
+  black_castled = false;
+
   precompute_eval(*this);
   hash = init_hash(*this);
   pawns_hash = init_pawns_hash(*this);
