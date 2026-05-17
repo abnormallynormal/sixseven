@@ -5,6 +5,7 @@
 #include "types.h"
 #include "board.h"
 #include "moveGen.h"
+#include "evaluation.h"
 
 void uci_loop(Board &board, MoveGenerator &mg);
 

@@ -39,6 +39,8 @@ int evaluate_position(Board &board)
   int eval = ((opening_eval * phase + end_eval * (24 - phase)) / 24);
 
   eval += evaluate_pawn_struct(board, phase);
+  eval += evaluate_rooks(board, phase);
+  eval += bishop_pair(board, phase);
 
   if (!board.is_white_to_move())
     eval *= -1;
@@ -127,5 +129,54 @@ int evaluate_pawn_struct(Board &board, int phase)
   int eval = ((opening_eval * phase + end_eval * (24 - phase)) / 24);
   store_pawn_entry(board.pawns_hash, eval);
 
+  return eval;
+}
+
+int evaluate_rooks(Board &board, int phase)
+{
+  u64 white = board.bitboards[wRook];
+  u64 black = board.bitboards[bRook];
+  int opening_eval = 0;
+  int end_eval = 0;
+  while (white)
+  {
+    int sq = __builtin_ctzll(white);
+    if (is_open_file(board, sq))
+    {
+      opening_eval += 25;
+      end_eval += 15;
+    }
+    else if (is_rook_on_semi(board, sq, true))
+    {
+      opening_eval += 15;
+      end_eval += 5;
+    }
+    // if(is_rook_on_seventh(board, sq, true)){
+    //   opening_eval += 10;
+    //   end_eval += 30;
+    // }
+    white &= white - 1;
+  }
+  while (black)
+  {
+    int sq = __builtin_ctzll(black);
+    if (is_open_file(board, sq))
+    {
+      opening_eval -= 25;
+      end_eval -= 15;
+    }
+    else if (is_rook_on_semi(board, sq, false))
+    {
+      opening_eval -= 15;
+      end_eval -= 5;
+    }
+    // if (is_rook_on_seventh(board, sq, false))
+    // {
+    //   opening_eval -= 10;
+    //   end_eval -= 30;
+    // }
+    black &= black - 1;
+  }
+  int eval = ((opening_eval * phase + end_eval * (24 - phase)) / 24);
   return eval;
 }
