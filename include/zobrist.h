@@ -21,3 +21,5 @@ extern u64 ep_file[8];
 void generate_pseudorandom();
 
 u64 init_hash(Board &b);
+
+u64 init_pawns_hash(Board &b);

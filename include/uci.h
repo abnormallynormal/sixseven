@@ -124,6 +124,9 @@ inline void fen_parser(std::string fen, std::string white_to_move, std::string c
     }
   }
   board.update_position();
+  board.hash = init_hash(board);
+  board.pawns_hash = init_pawns_hash(board);
+  precompute_eval(board);
 }
 
 inline Move move_parser(std::string move, Board &board){

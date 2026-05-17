@@ -19,6 +19,8 @@ public:
   int half_move_count;
   int en_passant_square;
   u64 hash;
+  u64 pawns_hash;
+
   Piece squares[64];
 
   int opening_material;
@@ -80,7 +82,7 @@ public:
     white_pieces = bitboards[wPawn] | bitboards[wKnight] | bitboards[wBishop] | bitboards[wRook] | bitboards[wQueen] | bitboards[wKing];
     black_pieces = bitboards[bPawn] | bitboards[bKnight] | bitboards[bBishop] | bitboards[bRook] | bitboards[bQueen] | bitboards[bKing];
     occupied_squares = white_pieces | black_pieces;
-    hash = init_hash(*this);
+   
   }
   inline bool has_piece_material()
   {

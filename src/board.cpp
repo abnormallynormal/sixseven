@@ -58,6 +58,8 @@ void Board::reset_board(){
   end_psqt = 0;
   phase = 0;
   precompute_eval(*this);
+  hash = init_hash(*this);
+  pawns_hash = init_pawns_hash(*this);
 }
 
 Board::Board()

@@ -6,6 +6,7 @@
 struct Undo
 {
   u64 hash;
+  u64 pawns_hash;
   int castling_rights;
   int en_passant_square;
   int half_move_count;
@@ -17,7 +18,7 @@ struct Undo
   int prev_end_psqt;
   int prev_phase;
   Undo() = default;
-  Undo(u64 hash, int castling, int ep, int count, Piece captured, bool white, int op_material, int op_psqt, int ed_material, int ed_psqt, int phase) : hash(hash), castling_rights(castling), en_passant_square(ep), half_move_count(count), captured_piece(captured), white_to_move(white), prev_opening_material(op_material), prev_opening_psqt(op_psqt), prev_end_material(ed_material), prev_end_psqt(ed_psqt), prev_phase(phase){};
+  Undo(u64 hash, u64 pawns_hash, int castling, int ep, int count, Piece captured, bool white, int op_material, int op_psqt, int ed_material, int ed_psqt, int phase) : hash(hash), pawns_hash(pawns_hash), castling_rights(castling), en_passant_square(ep), half_move_count(count), captured_piece(captured), white_to_move(white), prev_opening_material(op_material), prev_opening_psqt(op_psqt), prev_end_material(ed_material), prev_end_psqt(ed_psqt), prev_phase(phase){};
 };
 
 struct Move

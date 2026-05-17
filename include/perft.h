@@ -6,7 +6,7 @@
 #include "string"
 #include <iostream>
 #include <assert.h>
-std::string move_to_string(Move &m, Board &board)
+inline std::string move_to_string(Move &m, Board &board)
 {
   if (m.is_castling)
   {
@@ -37,7 +37,7 @@ std::string move_to_string(Move &m, Board &board)
   return result;
 }
 
-u64 perft(Board &board, int depth, bool white, MoveGenerator &move_gen, int ply = 0)
+inline u64 perft(Board &board, int depth, bool white, MoveGenerator &move_gen, int ply = 0)
 {
   if (depth == 0)
     return 1;
@@ -49,17 +49,41 @@ u64 perft(Board &board, int depth, bool white, MoveGenerator &move_gen, int ply 
   for (int i = 0; i < count; i++)
   {
     Move m = move_gen.move_lists[ply].moves[i];
+    u64 hash_before = board.hash;
+    u64 pawns_before = board.pawns_hash;
+
     board.make_move(m);
+
+    u64 hash_expected = init_hash(board);
+    u64 pawns_expected = init_pawns_hash(board);
+    if (board.hash != hash_expected || board.pawns_hash != pawns_expected)
+    {
+      std::cerr << "INCREMENTAL HASH BUG after make_move " << move_to_string(m, board)
+                << " at ply " << ply << "\n"
+                << "  hash       got=0x" << std::hex << board.hash
+                << " want=0x" << hash_expected << "\n"
+                << "  pawns_hash got=0x" << board.pawns_hash
+                << " want=0x" << pawns_expected << std::dec << "\n";
+      board.print_board();
+      std::abort();
+    }
+
     if (!move_gen.is_in_check(board, white))
     {
-      int current_nodes = perft(board, depth - 1, !white, move_gen, ply + 1);
-      // if (ply == 0)
-      //   std::cout << "\n"
-      //             << move_to_string(m, board) << " " << current_nodes;
-      nodes += current_nodes;
-      
+      nodes += perft(board, depth - 1, !white, move_gen, ply + 1);
     }
     board.unmake_move(m);
+
+    if (board.hash != hash_before || board.pawns_hash != pawns_before)
+    {
+      std::cerr << "ROUND-TRIP BUG across make/unmake of "
+                << move_to_string(m, board) << " at ply " << ply << "\n"
+                << "  hash       before=0x" << std::hex << hash_before
+                << " after=0x" << board.hash << "\n"
+                << "  pawns_hash before=0x" << pawns_before
+                << " after=0x" << board.pawns_hash << std::dec << "\n";
+      std::abort();
+    }
   }
   return nodes;
 }

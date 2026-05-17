@@ -5,6 +5,7 @@
 #include <climits>
 
 const int table_size = 1 << 20;
+const int pawn_table_size = 1 << 16;
 const int NO_EVAL = INT_MIN;
 
 struct HashEntry
@@ -17,7 +18,14 @@ struct HashEntry
   int static_eval;
 };
 
+struct PawnEntry
+{
+  u64 key;
+  int score;
+};
+
 extern HashEntry table[table_size];
+extern PawnEntry pawn_table[pawn_table_size];
 
 inline void store_entry(u64 hash, int score, int depth, Move best_move, int node_type, int ply, int eval)
 {
@@ -74,4 +82,12 @@ inline bool probe_entry(u64 hash, int depth, int alpha, int beta, int ply, int &
     }
   }
   return false;
+}
+
+inline void store_pawn_entry(u64 hash, int score)
+{
+  int index = hash & (pawn_table_size - 1);
+  PawnEntry &entry = pawn_table[index];
+  entry.key = hash;
+  entry.score = score;
 }

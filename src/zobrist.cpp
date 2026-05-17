@@ -28,14 +28,19 @@ void generate_pseudorandom()
   }
 }
 
-u64 init_hash(Board &b)
+static bool zobrist_initialized = false;
+static void ensure_zobrist_init()
 {
-  static bool initialized = false;
-  if (!initialized)
+  if (!zobrist_initialized)
   {
     generate_pseudorandom();
-    initialized = true;
+    zobrist_initialized = true;
   }
+}
+
+u64 init_hash(Board &b)
+{
+  ensure_zobrist_init();
   u64 hash = 0;
   for (int i = 0; i < 8; i++)
   {
@@ -57,6 +62,24 @@ u64 init_hash(Board &b)
   {
     int file = b.en_passant_square % 8;
     hash ^= ep_file[file];
+  }
+  return hash;
+}
+u64 init_pawns_hash(Board &b)
+{
+  ensure_zobrist_init();
+  u64 hash = 0;
+  for (int i = 0; i < 8; i++)
+  {
+    for (int j = 0; j < 8; j++)
+    {
+      int index = 8 * i + j;
+      if ((b.squares[index] % 6 == 0) && b.squares[index] != EMPTY)
+      {
+        Piece p = b.squares[index];
+        hash ^= square_randoms[p][index];
+      }
+    }
   }
   return hash;
 }

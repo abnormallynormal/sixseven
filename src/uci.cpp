@@ -214,8 +214,8 @@ void go_handler(std::vector<std::string> str, std::atomic<bool> &stop_flag, std:
     opp_inc = winc;
   }
 
-  constexpr int MOVE_OVERHEAD = 50;
-  int safe_time = std::max(1, player_time - MOVE_OVERHEAD);
+  int BUFFER_TIME = 50;
+  int safe_time = std::max(1, player_time - BUFFER_TIME);
   int base = safe_time / 40 + player_inc * 3 / 4;
   int soft_limit = std::max(1, std::min(base, safe_time / 8));
   int hard_limit = std::max(soft_limit, std::min(base * 3, safe_time / 4));

@@ -1,6 +1,7 @@
 #pragma once
 #include "board.h"
 #include "evalConstants.h"
+#include "transposition.h"
 #include <algorithm>
 
 inline int count_pieces(Piece p, Board &board)
@@ -29,7 +30,7 @@ inline u64 compute_neighboring_files(int sq){
 
 u64 compute_passed_pawn_mask(Board& board, int sq, bool white);
 
-int evaluate_pawn_struct(Board &board);
+int evaluate_pawn_struct(Board &board, int phase);
 
 int evaluate_passed_pawns(Board &board);
 

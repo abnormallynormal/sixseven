@@ -6,6 +6,7 @@ void Board::unmake_move(Move &m)
 {
   repetition_count--;
   hash = m.prev_state.hash;
+  pawns_hash = m.prev_state.pawns_hash;
   castling_rights = m.prev_state.castling_rights;
   en_passant_square = m.prev_state.en_passant_square;
   half_move_count = m.prev_state.half_move_count;

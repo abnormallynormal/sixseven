@@ -5,7 +5,7 @@
 
 void Board::make_move(Move &m)
 {
-  m.prev_state = Undo{hash, castling_rights, en_passant_square, half_move_count, squares[m.to], white_to_move, opening_material, opening_psqt, end_material, end_psqt, phase};
+  m.prev_state = Undo{hash, pawns_hash, castling_rights, en_passant_square, half_move_count, squares[m.to], white_to_move, opening_material, opening_psqt, end_material, end_psqt, phase};
 
   hash ^= castling_randoms[castling_rights];
   if (en_passant_square != NO_SQUARE)
@@ -97,6 +97,8 @@ void Board::make_move(Move &m)
 
     hash ^= square_randoms[moving_pawn][m.from];
     hash ^= square_randoms[captured_pawn][captured_sq];
+    pawns_hash ^= square_randoms[moving_pawn][m.from];
+    pawns_hash ^= square_randoms[captured_pawn][captured_sq];
 
     u64 from = 1ULL << m.from;
     u64 to = 1ULL << m.to;
@@ -124,6 +126,7 @@ void Board::make_move(Move &m)
       add_piece_eval(bPawn, m.to);
     }
     hash ^= square_randoms[moving_pawn][m.to];
+    pawns_hash ^= square_randoms[moving_pawn][m.to];
   }
   else if (m.promotion_piece != EMPTY)
   {
@@ -135,6 +138,7 @@ void Board::make_move(Move &m)
     remove_piece_eval(pawn_color, m.from);
     add_piece_eval(m.promotion_piece, m.to);
     hash ^= square_randoms[pawn_color][m.from];
+    pawns_hash ^= square_randoms[pawn_color][m.from];
     if (piece_to != EMPTY)
     {
       hash ^= square_randoms[piece_to][m.to];
@@ -160,9 +164,16 @@ void Board::make_move(Move &m)
     remove_piece_eval(piece_from, m.from);
     add_piece_eval(piece_from, m.to);
     hash ^= square_randoms[piece_from][m.from];
+    if (piece_from % 6 == 0)
+    {
+      pawns_hash ^= square_randoms[piece_from][m.from];
+      pawns_hash ^= square_randoms[piece_from][m.to];
+    }
     if (piece_to != EMPTY)
     {
       hash ^= square_randoms[piece_to][m.to];
+      if (piece_to % 6 == 0)
+        pawns_hash ^= square_randoms[piece_to][m.to];
       remove_piece_eval(piece_to, m.to);
     }
 
