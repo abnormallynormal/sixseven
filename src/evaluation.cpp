@@ -7,6 +7,7 @@ const int opening_isolated_pawn_maluses[] = {0, -10, -25, -50, -80, -85, -90, -9
 const int end_isolated_pawn_maluses[] = {0, -20, -45, -80, -120, -130, -140, -150, -160};
 const int opening_knight_outpost_bonuses[] = {0, 0, 0, 5, 15, 25, 15, 0};
 const int end_knight_outpost_bonuses[] = {0, 0, 0, 3, 5, 10, 5, 0};
+const int attacker_defender_bonuses[] = {1, 3, 3, 5, 9, 0};
 
 void precompute_eval(Board &board)
 {

@@ -40,6 +40,7 @@ inline bool is_semi_open_file(Board &board, int sq)
     return true;
   return false;
 }
+
 inline bool is_semi_open_file(Board &board, u64 file)
 {
   if ((board.bitboards[wPawn] & file) == 0)
@@ -74,6 +75,7 @@ inline bool is_open_file(Board &board, int sq)
     return true;
   return false;
 }
+
 inline bool is_open_file(Board &board, u64 file)
 {
   if (((board.bitboards[wPawn] & file) == 0) && ((board.bitboards[bPawn] & file) == 0))
@@ -131,3 +133,5 @@ inline int bishop_pair(Board &board, int phase)
 int evaluate_king_safety(Board &board, int phase);
 
 int pawn_shield(Board &board, int sq, bool white, u64 file_on, u64 file_close, u64 file_far);
+
+int king_zone(Board &board, int sq, bool white);
