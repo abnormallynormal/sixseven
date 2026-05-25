@@ -270,9 +270,7 @@ int pawn_shield(Board &board, int sq, bool white, u64 file_on, u64 file_close, u
     {
       int pawn = __builtin_ctzll(pawns_on);
       int rank = pawn / 8 - (sq + 8) / 8;
-      if (rank == 0)
-        eval += 15;
-      else if (rank == 1)
+      if (rank == 1)
         eval -= 10;
       else if (rank == 2)
         eval -= 20;
@@ -285,9 +283,7 @@ int pawn_shield(Board &board, int sq, bool white, u64 file_on, u64 file_close, u
       {
         int pawn = __builtin_ctzll(pawns_close);
         int rank = pawn / 8 - (sq + 8) / 8;
-        if (rank == 0)
-          eval += 5;
-        else if (rank == 1)
+        if (rank == 1)
           eval -= 5;
         else if (rank == 2)
           eval -= 10;
@@ -301,9 +297,7 @@ int pawn_shield(Board &board, int sq, bool white, u64 file_on, u64 file_close, u
       {
         int pawn = __builtin_ctzll(pawns_far);
         int rank = pawn / 8 - (sq + 8) / 8;
-        if (rank == 0)
-          eval += 10;
-        else if (rank == 1)
+        if (rank == 1)
           eval -= 10;
         else if (rank == 2)
           eval -= 15;
@@ -321,9 +315,7 @@ int pawn_shield(Board &board, int sq, bool white, u64 file_on, u64 file_close, u
     {
       int pawn = 63 - __builtin_clzll(pawns_on);
       int rank = (sq - 8) / 8 - pawn / 8;
-      if (rank == 0)
-        eval -= 15;
-      else if (rank == 1)
+      if (rank == 1)
         eval += 10;
       else if (rank == 2)
         eval += 20;
@@ -336,9 +328,7 @@ int pawn_shield(Board &board, int sq, bool white, u64 file_on, u64 file_close, u
       {
         int pawn = 63 - __builtin_clzll(pawns_close);
         int rank = (sq - 8) / 8 - pawn / 8;
-        if (rank == 0)
-          eval -= 5;
-        else if (rank == 1)
+        if (rank == 1)
           eval += 5;
         else if (rank == 2)
           eval += 10;
@@ -352,9 +342,7 @@ int pawn_shield(Board &board, int sq, bool white, u64 file_on, u64 file_close, u
       {
         int pawn = 63 - __builtin_clzll(pawns_far);
         int rank = (sq - 8) / 8 - pawn / 8;
-        if (rank == 0)
-          eval -= 10;
-        else if (rank == 1)
+        if (rank == 1)
           eval += 10;
         else if (rank == 2)
           eval += 15;
@@ -392,7 +380,7 @@ int evaluate_king_safety(Board &board, int phase, MoveGenerator &mg)
   {
     if (white / 8 >= 6)
       eval -= 25;
-    else
+    else if (white % 8 <= 2 || white % 8 >= 5)
     {
       eval += pawn_shield(board, white, true, file_on, file_left, file_right);
     }
@@ -411,7 +399,8 @@ int evaluate_king_safety(Board &board, int phase, MoveGenerator &mg)
   }
   else
   {
-    eval += pawn_shield(board, white, true, file_on, file_right, file_left);
+    if (white % 8 <= 2 || white % 8 >= 5)
+      eval += pawn_shield(board, white, true, file_on, file_right, file_left);
     if (is_open_file(board, file_left) && file_left != 0)
       eval -= 30;
     else if (is_semi_open_file(board, file_left, true) && file_left != 0)
@@ -449,7 +438,7 @@ int evaluate_king_safety(Board &board, int phase, MoveGenerator &mg)
   {
     if (black / 8 <= 1)
       eval += 25;
-    else
+    else if (black % 8 <= 2 || black % 8 >= 5)
     {
       eval += pawn_shield(board, black, false, file_on, file_left, file_right);
     }
@@ -468,7 +457,8 @@ int evaluate_king_safety(Board &board, int phase, MoveGenerator &mg)
   }
   else
   {
-    eval += pawn_shield(board, black, false, file_on, file_right, file_left);
+    if (black % 8 <= 2 || black % 8 >= 5)
+      eval += pawn_shield(board, black, false, file_on, file_right, file_left);
     if (is_open_file(board, file_left) && file_left != 0)
       eval += 30;
     else if (is_semi_open_file(board, file_left, false) && file_left != 0)
@@ -510,7 +500,7 @@ int king_zone(Board &board, int sq, bool is_white, MoveGenerator &mg)
       int square = __builtin_ctzll(knights);
       u64 attacked_squares = mg.knight_attack_table[square] & zone;
       int count = __builtin_popcountll(attacked_squares);
-      eval += count * 3;
+      eval += count * 2;
       attacker_count = count != 0 ? attacker_count + 1 : attacker_count;
       knights &= knights - 1;
     }
@@ -521,7 +511,7 @@ int king_zone(Board &board, int sq, bool is_white, MoveGenerator &mg)
       int square = __builtin_ctzll(bishops);
       u64 attacked_squares = mg.get_bishop_attacks(square, board) & zone;
       int count = __builtin_popcountll(attacked_squares);
-      eval += count * 3;
+      eval += count * 2;
       attacker_count = count != 0 ? attacker_count + 1 : attacker_count;
       bishops &= bishops - 1;
     }
@@ -532,7 +522,7 @@ int king_zone(Board &board, int sq, bool is_white, MoveGenerator &mg)
       int square = __builtin_ctzll(rooks);
       u64 attacked_squares = mg.get_rook_attacks(square, board) & zone;
       int count = __builtin_popcountll(attacked_squares);
-      eval += count * 5;
+      eval += count * 3;
       attacker_count = count != 0 ? attacker_count + 1 : attacker_count;
       rooks &= rooks - 1;
     }
@@ -543,7 +533,7 @@ int king_zone(Board &board, int sq, bool is_white, MoveGenerator &mg)
       int square = __builtin_ctzll(queen);
       u64 attacked_squares = mg.get_queen_attacks(square, board) & zone;
       int count = __builtin_popcountll(attacked_squares);
-      eval += count * 9;
+      eval += count * 5;
       attacker_count = count != 0 ? attacker_count + 1 : attacker_count;
       queen &= queen - 1;
     }
@@ -559,7 +549,7 @@ int king_zone(Board &board, int sq, bool is_white, MoveGenerator &mg)
       int square = __builtin_ctzll(knights);
       u64 attacked_squares = mg.knight_attack_table[square] & zone;
       int count = __builtin_popcountll(attacked_squares);
-      eval += count * 3;
+      eval += count * 2;
       attacker_count = count != 0 ? attacker_count + 1 : attacker_count;
       knights &= knights - 1;
     }
@@ -570,7 +560,7 @@ int king_zone(Board &board, int sq, bool is_white, MoveGenerator &mg)
       int square = __builtin_ctzll(bishops);
       u64 attacked_squares = mg.get_bishop_attacks(square, board) & zone;
       int count = __builtin_popcountll(attacked_squares);
-      eval += count * 3;
+      eval += count * 2;
       attacker_count = count != 0 ? attacker_count + 1 : attacker_count;
       bishops &= bishops - 1;
     }
@@ -581,7 +571,7 @@ int king_zone(Board &board, int sq, bool is_white, MoveGenerator &mg)
       int square = __builtin_ctzll(rooks);
       u64 attacked_squares = mg.get_rook_attacks(square, board) & zone;
       int count = __builtin_popcountll(attacked_squares);
-      eval += count * 5;
+      eval += count * 3;
       attacker_count = count != 0 ? attacker_count + 1 : attacker_count;
       rooks &= rooks - 1;
     }
@@ -592,13 +582,13 @@ int king_zone(Board &board, int sq, bool is_white, MoveGenerator &mg)
       int square = __builtin_ctzll(queen);
       u64 attacked_squares = mg.get_queen_attacks(square, board) & zone;
       int count = __builtin_popcountll(attacked_squares);
-      eval += count * 9;
+      eval += count * 5;
       attacker_count = count != 0 ? attacker_count + 1 : attacker_count;
       queen &= queen - 1;
     }
   }
   double ratio = attacker_count_bonus[std::min(attacker_count, 7)] / 100.0;
   double temp_eval = eval * ratio;
-  eval = (int) temp_eval;
+  eval = (int)temp_eval;
   return eval;
 }
