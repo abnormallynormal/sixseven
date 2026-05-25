@@ -1,4 +1,5 @@
 #include "evaluation.h"
+#include "bitboardMasks.h"
 #include <algorithm>
 
 const int opening_passed_pawn_bonuses[] = {0, 5, 10, 20, 35, 50, 60};
@@ -7,7 +8,7 @@ const int opening_isolated_pawn_maluses[] = {0, -10, -25, -50, -80, -85, -90, -9
 const int end_isolated_pawn_maluses[] = {0, -20, -45, -80, -120, -130, -140, -150, -160};
 const int opening_knight_outpost_bonuses[] = {0, 0, 0, 5, 15, 25, 15, 0};
 const int end_knight_outpost_bonuses[] = {0, 0, 0, 3, 5, 10, 5, 0};
-const int attacker_defender_bonuses[] = {1, 3, 3, 5, 9, 0};
+const int attacker_count_bonus[] = {0, 0, 50, 75, 88, 94, 97, 99};
 
 void precompute_eval(Board &board)
 {
@@ -33,7 +34,7 @@ void precompute_eval(Board &board)
   }
 }
 
-int evaluate_position(Board &board)
+int evaluate_position(Board &board, MoveGenerator &mg)
 {
   int opening_eval = board.opening_material + board.opening_psqt;
   int end_eval = board.end_material + board.end_psqt;
@@ -45,7 +46,7 @@ int evaluate_position(Board &board)
   eval += evaluate_rooks(board, phase);
   eval += bishop_pair(board, phase);
   eval += knight_outposts(board, phase);
-  eval += evaluate_king_safety(board, phase);
+  eval += evaluate_king_safety(board, phase, mg);
 
   if (!board.is_white_to_move())
     eval *= -1;
@@ -363,7 +364,7 @@ int pawn_shield(Board &board, int sq, bool white, u64 file_on, u64 file_close, u
   return eval;
 }
 
-int evaluate_king_safety(Board &board, int phase)
+int evaluate_king_safety(Board &board, int phase, MoveGenerator &mg)
 {
   // castling rights check
   int white = __builtin_ctzll(board.bitboards[wKing]);
@@ -482,5 +483,122 @@ int evaluate_king_safety(Board &board, int phase)
       eval += 10;
   }
 
+  eval -= king_zone(board, white, true, mg);
+  eval += king_zone(board, black, false, mg);
+
   return (eval * phase) / 24;
+}
+
+int king_zone(Board &board, int sq, bool is_white, MoveGenerator &mg)
+{
+  int file = sq % 8;
+  u64 file_on = a_file << file;
+  u64 file_left = file > 0 ? a_file << (file - 1) : 0ULL;
+  u64 file_right = file < 7 ? a_file << (file + 1) : 0ULL;
+  u64 rank = first_rank << ((sq / 8) * 8);
+  u64 rank_above = (sq / 8) < 7 ? first_rank << ((sq / 8 + 1) * 8) : 0ULL;
+  u64 rank_below = (sq / 8) > 0 ? first_rank << ((sq / 8 - 1) * 8) : 0ULL;
+  int eval = 0;
+  int attacker_count = 0;
+  if (is_white)
+  {
+    u64 rank_double = (sq / 8) < 6 ? first_rank << ((sq / 8 + 2) * 8) : 0ULL;
+    u64 zone = (file_on | file_left | file_right) & (rank | rank_above | rank_below | rank_double);
+    u64 knights = board.bitboards[bKnight];
+    while (knights)
+    {
+      int square = __builtin_ctzll(knights);
+      u64 attacked_squares = mg.knight_attack_table[square] & zone;
+      int count = __builtin_popcountll(attacked_squares);
+      eval += count * 3;
+      attacker_count = count != 0 ? attacker_count + 1 : attacker_count;
+      knights &= knights - 1;
+    }
+
+    u64 bishops = board.bitboards[bBishop];
+    while (bishops)
+    {
+      int square = __builtin_ctzll(bishops);
+      u64 attacked_squares = mg.get_bishop_attacks(square, board) & zone;
+      int count = __builtin_popcountll(attacked_squares);
+      eval += count * 3;
+      attacker_count = count != 0 ? attacker_count + 1 : attacker_count;
+      bishops &= bishops - 1;
+    }
+
+    u64 rooks = board.bitboards[bRook];
+    while (rooks)
+    {
+      int square = __builtin_ctzll(rooks);
+      u64 attacked_squares = mg.get_rook_attacks(square, board) & zone;
+      int count = __builtin_popcountll(attacked_squares);
+      eval += count * 5;
+      attacker_count = count != 0 ? attacker_count + 1 : attacker_count;
+      rooks &= rooks - 1;
+    }
+
+    u64 queen = board.bitboards[bQueen];
+    while (queen)
+    {
+      int square = __builtin_ctzll(queen);
+      u64 attacked_squares = mg.get_queen_attacks(square, board) & zone;
+      int count = __builtin_popcountll(attacked_squares);
+      eval += count * 9;
+      attacker_count = count != 0 ? attacker_count + 1 : attacker_count;
+      queen &= queen - 1;
+    }
+  }
+  else
+  {
+    u64 rank_double = (sq / 8) > 1 ? first_rank << ((sq / 8 - 2) * 8) : 0ULL;
+    u64 zone = (file_on | file_left | file_right) & (rank | rank_above | rank_below | rank_double);
+
+    u64 knights = board.bitboards[wKnight];
+    while (knights)
+    {
+      int square = __builtin_ctzll(knights);
+      u64 attacked_squares = mg.knight_attack_table[square] & zone;
+      int count = __builtin_popcountll(attacked_squares);
+      eval += count * 3;
+      attacker_count = count != 0 ? attacker_count + 1 : attacker_count;
+      knights &= knights - 1;
+    }
+
+    u64 bishops = board.bitboards[wBishop];
+    while (bishops)
+    {
+      int square = __builtin_ctzll(bishops);
+      u64 attacked_squares = mg.get_bishop_attacks(square, board) & zone;
+      int count = __builtin_popcountll(attacked_squares);
+      eval += count * 3;
+      attacker_count = count != 0 ? attacker_count + 1 : attacker_count;
+      bishops &= bishops - 1;
+    }
+
+    u64 rooks = board.bitboards[wRook];
+    while (rooks)
+    {
+      int square = __builtin_ctzll(rooks);
+      u64 attacked_squares = mg.get_rook_attacks(square, board) & zone;
+      int count = __builtin_popcountll(attacked_squares);
+      eval += count * 5;
+      attacker_count = count != 0 ? attacker_count + 1 : attacker_count;
+      rooks &= rooks - 1;
+    }
+
+    u64 queen = board.bitboards[wQueen];
+    while (queen)
+    {
+      int square = __builtin_ctzll(queen);
+      u64 attacked_squares = mg.get_queen_attacks(square, board) & zone;
+      int count = __builtin_popcountll(attacked_squares);
+      eval += count * 9;
+      attacker_count = count != 0 ? attacker_count + 1 : attacker_count;
+      queen &= queen - 1;
+    }
+  }
+  double ratio = attacker_count_bonus[std::min(attacker_count, 7)] / 100.0;
+  double temp_eval = eval * ratio;
+  eval = (int) temp_eval;
+  return eval;
 }

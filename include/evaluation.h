@@ -3,6 +3,7 @@
 #include "evalConstants.h"
 #include "transposition.h"
 #include <algorithm>
+#include "moveGen.h"
 
 const u64 a_file = 0x0101010101010101;
 
@@ -20,7 +21,7 @@ inline int count_pieces(Piece p, Board &board)
 
 void precompute_eval(Board &board);
 
-int evaluate_position(Board &board);
+int evaluate_position(Board &board, MoveGenerator &mg);
 
 inline u64 compute_neighboring_files(int sq)
 {
@@ -130,8 +131,8 @@ inline int bishop_pair(Board &board, int phase)
   return (opening_eval * phase + end_eval * (24 - phase)) / 24;
 }
 
-int evaluate_king_safety(Board &board, int phase);
+int evaluate_king_safety(Board &board, int phase, MoveGenerator &mg);
 
 int pawn_shield(Board &board, int sq, bool white, u64 file_on, u64 file_close, u64 file_far);
 
-int king_zone(Board &board, int sq, bool white);
+int king_zone(Board &board, int sq, bool is_white, MoveGenerator &mg);
