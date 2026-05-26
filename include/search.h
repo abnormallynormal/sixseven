@@ -1,5 +1,6 @@
 #pragma once
 
+#include "searchConstants.h"
 #include "board.h"
 #include "moveGen.h"
 #include "types.h"
@@ -14,6 +15,12 @@ extern int repetition_count;
 void reset_killer_table();
 void reset_history_table();
 void reset_tt();
+
+struct RootReturn {
+  Move move;
+  int score;
+  RootReturn(Move move, int score) : move(move), score(score){};
+};
 
 inline bool is_repetition(const Board &board)
 {
@@ -35,7 +42,7 @@ inline void reset_search()
   reset_tt();
 }
 
-Move root_negamax(Board &board, MoveGenerator &move_gen, int depth, std::atomic<bool> &stop_flag);
+RootReturn root_negamax(Board &board, MoveGenerator &move_gen, int alpha, int beta, int depth, std::atomic<bool> &stop_flag);
 
 int negamax(Board &board, MoveGenerator &move_gen, int alpha, int beta, int depth, int ply, bool can_null, std::atomic<bool> &stop_flag);
 
@@ -50,10 +57,10 @@ inline Move iterative_deepening(Board &board, MoveGenerator &move_gen, int max_d
   Move best_move = Move(false, true);
   for (int i = 1; i <= max_depth; i++)
   {
-    Move m = root_negamax(board, move_gen, i, stop_flag);
+    RootReturn root = root_negamax(board, move_gen, -INF, INF, i, stop_flag);
     if (i == 1 || !stop_flag.load())
     {
-      best_move = m;
+      best_move = root.move;
       depth_search = i;
     }
     auto elapsed = std::chrono::duration_cast<std::chrono::milliseconds>(

@@ -31,7 +31,8 @@ inline void store_entry(u64 hash, int score, int depth, Move best_move, int node
 {
   HashEntry &entry = table[hash & (table_size - 1)];
 
-  if (entry.key == hash || depth >= entry.depth)
+  bool replace = (entry.key == 0) || (entry.key == hash && depth >= entry.depth) || (entry.key != hash && depth >= entry.depth);
+  if (replace)
   {
     if (score > MATE_THRESHOLD - 10000)
     {
