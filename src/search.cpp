@@ -149,7 +149,7 @@ int negamax(Board &board, MoveGenerator &move_gen, int alpha, int beta, int dept
 
     bool move_is_check = move_gen.is_in_check(board, board.is_white_to_move());
     bool move_is_capture = !(m.prev_state.captured_piece == EMPTY);
-
+    int ce = move_is_check ? 1 : 0;
     int score;
 
     bool is_killer = board.is_same_move(m, killer_table[0][ply]) || board.is_same_move(m, killer_table[1][ply]);
@@ -157,7 +157,7 @@ int negamax(Board &board, MoveGenerator &move_gen, int alpha, int beta, int dept
 
     if (i == 0)
     {
-      score = -negamax(board, move_gen, -beta, -alpha, depth - 1, ply + 1, true, stop_flag);
+      score = -negamax(board, move_gen, -beta, -alpha, depth + ce - 1, ply + 1, true, stop_flag);
     }
     else
     {
@@ -165,22 +165,22 @@ int negamax(Board &board, MoveGenerator &move_gen, int alpha, int beta, int dept
       {
         int R = 1 + (depth / 3) + (i / 6);
         R = std::min(R, depth - 1);
-        score = -negamax(board, move_gen, -alpha - 1, -alpha, depth - 1 - R, ply + 1, true, stop_flag);
+        score = -negamax(board, move_gen, -alpha - 1, -alpha, depth + ce - 1 - R, ply + 1, true, stop_flag);
         if (score > alpha)
         {
-          score = -negamax(board, move_gen, -alpha - 1, -alpha, depth - 1, ply + 1, true, stop_flag);
+          score = -negamax(board, move_gen, -alpha - 1, -alpha, depth + ce - 1, ply + 1, true, stop_flag);
           if (score > alpha)
           {
-            score = -negamax(board, move_gen, -beta, -alpha, depth - 1, ply + 1, true, stop_flag);
+            score = -negamax(board, move_gen, -beta, -alpha, depth + ce - 1, ply + 1, true, stop_flag);
           }
         }
       }
       else
       {
-        score = -negamax(board, move_gen, -alpha - 1, -alpha, depth - 1, ply + 1, true, stop_flag);
+        score = -negamax(board, move_gen, -alpha - 1, -alpha, depth + ce - 1, ply + 1, true, stop_flag);
         if (score > alpha)
         {
-          score = -negamax(board, move_gen, -beta, -alpha, depth - 1, ply + 1, true, stop_flag);
+          score = -negamax(board, move_gen, -beta, -alpha, depth + ce - 1, ply + 1, true, stop_flag);
         }
       }
     }
