@@ -8,9 +8,9 @@
 #include <chrono>
 #include <algorithm>
 
-extern Move killer_table[2][256];
+extern Move killer_table[2][512];
 extern int history_table[12][64];
-extern u64 repetition_table[1024];
+extern u64 repetition_table[2048];
 extern int repetition_count;
 
 void reset_killer_table();

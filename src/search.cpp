@@ -5,9 +5,9 @@
 #include <climits>
 #include <atomic>
 
-Move killer_table[2][256];
+Move killer_table[2][512];
 int history_table[12][64];
-u64 repetition_table[1024];
+u64 repetition_table[2048];
 int repetition_count = 0;
 
 const int GOOD_CAPTURE = 1000000;
@@ -16,7 +16,7 @@ const int BAD_CAPTURE = -1000000;
 void reset_killer_table()
 {
   for (int i = 0; i < 2; i++)
-    for (int j = 0; j < 256; j++)
+    for (int j = 0; j < 512; j++)
       killer_table[i][j] = Move();
 }
 
@@ -119,7 +119,7 @@ int negamax(Board &board, MoveGenerator &move_gen, int alpha, int beta, int dept
   // move ordering
   int greatest_value = -INF;
   move_gen.generate_moves(board, ply);
-  int scores[218] = {0};
+  int scores[256] = {0};
   for (int i = 0; i < move_gen.move_lists[ply].count; i++)
   {
     if (board.is_same_move(move_gen.move_lists[ply].moves[i], entry_move))
@@ -129,8 +129,8 @@ int negamax(Board &board, MoveGenerator &move_gen, int alpha, int beta, int dept
   }
 
   // recursive call
-  Move quiets_searched[218];
-  Piece quiets_pieces[218];
+  Move quiets_searched[256];
+  Piece quiets_pieces[256];
   int quiets_count = 0;
   for (int i = 0; i < move_gen.move_lists[ply].count; i++)
   {
@@ -272,7 +272,7 @@ RootReturn root_negamax(Board &board, MoveGenerator &move_gen, int alpha, int be
 
   move_gen.generate_moves(board, 0);
 
-  int move_scores[218];
+  int move_scores[256];
 
   int original_alpha = alpha;
 
@@ -393,7 +393,7 @@ int quiescence(Board &board, MoveGenerator &move_gen, int alpha, int beta, int p
 
   if (is_in_check)
   {
-    int scores[218] = {0};
+    int scores[256] = {0};
     move_gen.generate_moves(board, ply);
 
     for (int i = 0; i < move_gen.move_lists[ply].count; i++)
@@ -451,7 +451,7 @@ int quiescence(Board &board, MoveGenerator &move_gen, int alpha, int beta, int p
     if (stand_pat >= beta)
       return stand_pat;
 
-    int scores[218] = {0};
+    int scores[256] = {0};
     move_gen.generate_captures(board, ply);
 
     for (int i = 0; i < move_gen.move_lists[ply].count; i++)
