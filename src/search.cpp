@@ -147,6 +147,7 @@ int negamax(Board &board, MoveGenerator &move_gen, int alpha, int beta, int dept
 
     Move m = move_gen.move_lists[ply].moves[i];
     Piece piece_moved = board.squares[m.from];
+
     board.make_move(m);
 
     if (move_gen.is_in_check(board, !board.is_white_to_move()))
@@ -157,6 +158,16 @@ int negamax(Board &board, MoveGenerator &move_gen, int alpha, int beta, int dept
 
     bool move_is_check = move_gen.is_in_check(board, board.is_white_to_move());
     bool move_is_capture = !(m.prev_state.captured_piece == EMPTY);
+
+    if (depth <= 5 && quiets_count >= 3 + depth * depth && !move_is_check && !move_is_capture && m.promotion_piece == EMPTY && !is_in_check)
+    {
+      board.unmake_move(m);
+      quiets_searched[quiets_count] = m;
+      quiets_pieces[quiets_count] = piece_moved;
+      quiets_count++;
+      continue;
+    }
+
     int ce = move_is_check ? 1 : 0;
     int score;
 
