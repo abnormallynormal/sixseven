@@ -66,6 +66,10 @@ int mvv_lva(Piece attack, Piece victim) { return (piece_vals[victim] - piece_val
 
 int negamax(Board &board, MoveGenerator &move_gen, int alpha, int beta, int depth, int ply, bool can_null, std::atomic<bool> &stop_flag)
 {
+  if (ply >= 250)
+    return move_gen.is_in_check(board, board.is_white_to_move())
+             ? 0
+             : evaluate_position(board, move_gen);
   if (board.half_move_count >= 100)
     return 0;
   if (ply > 0 && is_repetition(board))
@@ -178,7 +182,7 @@ int negamax(Board &board, MoveGenerator &move_gen, int alpha, int beta, int dept
       continue;
     }
 
-    int ce = move_is_check ? 1 : 0;
+    int ce = (move_is_check && !is_in_check) ? 1 : 0;
     int score;
 
     bool is_killer = board.is_same_move(m, killer_table[0][ply]) || board.is_same_move(m, killer_table[1][ply]);
