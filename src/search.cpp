@@ -35,6 +35,15 @@ void reset_tt()
 
 int score_move(Board &board, Move m, int ply, MoveGenerator &mg)
 {
+  if (m.is_castling)
+  {
+    if (board.is_same_move(m, killer_table[0][ply]))
+      return 90000;
+    if (board.is_same_move(m, killer_table[1][ply]))
+      return 80000;
+
+    return 0;
+  }
   if (board.squares[m.to] != EMPTY)
   {
     int score = see_capture(board, m, board.is_white_to_move(), mg);
@@ -49,6 +58,7 @@ int score_move(Board &board, Move m, int ply, MoveGenerator &mg)
     return 90000;
   if (board.is_same_move(m, killer_table[1][ply]))
     return 80000;
+  
   return history_table[board.squares[m.from]][m.to];
 }
 

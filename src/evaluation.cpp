@@ -194,7 +194,7 @@ int knight_outposts(Board &board, int phase)
   while (white)
   {
     int sq = __builtin_ctzll(white);
-    if (sq / 8 >= 3)
+    if (sq / 8 >= 3 && sq / 8 <= 6)
     {
       u64 ranks_ahead = ~0ULL << ((sq / 8 + 1) * 8);
       u64 enemy_pawns = compute_neighboring_files(sq) & ranks_ahead & board.bitboards[bPawn];
