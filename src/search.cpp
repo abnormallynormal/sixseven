@@ -10,6 +10,10 @@ int history_table[12][64];
 u64 repetition_table[2048];
 int repetition_count = 0;
 
+thread_local int   move_scores_buf[256][256];
+thread_local int   quiet_to_buf[256][256];
+thread_local Piece quiet_piece_buf[256][256];
+
 const int GOOD_CAPTURE = 1000000;
 const int BAD_CAPTURE = -1000000;
 
@@ -133,7 +137,7 @@ int negamax(Board &board, MoveGenerator &move_gen, int alpha, int beta, int dept
   // move ordering
   int greatest_value = -INF;
   move_gen.generate_moves(board, ply);
-  int scores[256] = {0};
+  int (&scores)[256] = move_scores_buf[ply];
   for (int i = 0; i < move_gen.move_lists[ply].count; i++)
   {
     if (board.is_same_move(move_gen.move_lists[ply].moves[i], entry_move))
@@ -143,8 +147,8 @@ int negamax(Board &board, MoveGenerator &move_gen, int alpha, int beta, int dept
   }
 
   // recursive call
-  Move quiets_searched[256];
-  Piece quiets_pieces[256];
+  int (&quiets_to)[256] = quiet_to_buf[ply];
+  Piece (&quiets_pieces)[256] = quiet_piece_buf[ply];
   int quiets_count = 0;
   for (int i = 0; i < move_gen.move_lists[ply].count; i++)
   {
@@ -176,7 +180,7 @@ int negamax(Board &board, MoveGenerator &move_gen, int alpha, int beta, int dept
     if (depth <= 5 && quiets_count >= 3 + depth * depth && !move_is_check && !move_is_capture && m.promotion_piece == EMPTY && !is_in_check)
     {
       board.unmake_move(m);
-      quiets_searched[quiets_count] = m;
+      quiets_to[quiets_count] = m.to;
       quiets_pieces[quiets_count] = piece_moved;
       quiets_count++;
       continue;
@@ -244,7 +248,7 @@ int negamax(Board &board, MoveGenerator &move_gen, int alpha, int beta, int dept
         {
           if (quiets_pieces[q] != EMPTY)
           {
-            int &h = history_table[quiets_pieces[q]][quiets_searched[q].to];
+            int &h = history_table[quiets_pieces[q]][quiets_to[q]];
             h -= bonus;
             h = std::clamp(h, -30000, 30000);
           }
@@ -255,7 +259,7 @@ int negamax(Board &board, MoveGenerator &move_gen, int alpha, int beta, int dept
     }
     if (!move_is_capture && m.promotion_piece == EMPTY)
     {
-      quiets_searched[quiets_count] = m;
+      quiets_to[quiets_count] = m.to;
       quiets_pieces[quiets_count] = piece_moved;
       quiets_count++;
     }
@@ -292,7 +296,7 @@ RootReturn root_negamax(Board &board, MoveGenerator &move_gen, int alpha, int be
 
   move_gen.generate_moves(board, 0);
 
-  int move_scores[256];
+  int (&move_scores)[256] = move_scores_buf[0];
 
   int original_alpha = alpha;
 
@@ -393,7 +397,7 @@ int quiescence(Board &board, MoveGenerator &move_gen, int alpha, int beta, int p
 {
   if (stop_flag.load(std::memory_order_relaxed))
     return 0;
-  if (depth >= 8)
+  if (depth >= 8 || ply >= 250)
   {
     return (static_eval != NO_EVAL) ? static_eval : evaluate_position(board, move_gen);
   }
@@ -413,7 +417,7 @@ int quiescence(Board &board, MoveGenerator &move_gen, int alpha, int beta, int p
 
   if (is_in_check)
   {
-    int scores[256] = {0};
+    int (&scores)[256] = move_scores_buf[ply];
     move_gen.generate_moves(board, ply);
 
     for (int i = 0; i < move_gen.move_lists[ply].count; i++)
@@ -471,7 +475,7 @@ int quiescence(Board &board, MoveGenerator &move_gen, int alpha, int beta, int p
     if (stand_pat >= beta)
       return stand_pat;
 
-    int scores[256] = {0};
+    int (&scores)[256] = move_scores_buf[ply];
     move_gen.generate_captures(board, ply);
 
     for (int i = 0; i < move_gen.move_lists[ply].count; i++)
