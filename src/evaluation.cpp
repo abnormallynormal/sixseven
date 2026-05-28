@@ -56,10 +56,13 @@ int evaluate_position(Board &board, MoveGenerator &mg)
 u64 compute_passed_pawn_mask(Board &board, int sq, bool white)
 {
   u64 file_on = a_file << (sq % 8);
-  u64 ranks_ahead = white ? ~0ULL << ((sq / 8 + 1) * 8) : ~0ULL >> (64 - (sq / 8) * 8);
+  int white_shift = (sq / 8 + 1) * 8;
+  int black_shift = (sq / 8) * 8;
+  u64 ranks_ahead = white
+                        ? (white_shift >= 64 ? 0ULL : ~0ULL << white_shift)
+                        : (black_shift == 0 ? 0ULL : ~0ULL >> (64 - black_shift));
   return ranks_ahead & (compute_neighboring_files(sq) | file_on);
 }
-
 int evaluate_pawn_struct(Board &board, int phase)
 {
   PawnEntry &entry = pawn_table[board.pawns_hash & (pawn_table_size - 1)];
