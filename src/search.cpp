@@ -230,14 +230,20 @@ int negamax(Board &board, MoveGenerator &move_gen, int alpha, int beta, int dept
         killer_table[1][ply] = killer_table[0][ply];
         killer_table[0][ply] = m;
         int bonus = 300 * depth - 250;
-        int &hm = history_table[piece_moved][m.to];
-        hm += bonus;
-        hm = std::clamp(hm, -30000, 30000);
+        if (piece_moved != EMPTY)
+        {
+          int &hm = history_table[piece_moved][m.to];
+          hm += bonus;
+          hm = std::clamp(hm, -30000, 30000);
+        }
         for (int q = 0; q < quiets_count; q++)
         {
-          int &h = history_table[quiets_pieces[q]][quiets_searched[q].to];
-          h -= bonus;
-          h = std::clamp(h, -30000, 30000);
+          if (quiets_pieces[q] != EMPTY)
+          {
+            int &h = history_table[quiets_pieces[q]][quiets_searched[q].to];
+            h -= bonus;
+            h = std::clamp(h, -30000, 30000);
+          }
         }
       }
       board.unmake_move(m);
