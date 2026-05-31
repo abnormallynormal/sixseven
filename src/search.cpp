@@ -10,8 +10,8 @@ int history_table[12][64];
 u64 repetition_table[2048];
 int repetition_count = 0;
 
-thread_local int   move_scores_buf[256][256];
-thread_local int   quiet_to_buf[256][256];
+thread_local int move_scores_buf[256][256];
+thread_local int quiet_to_buf[256][256];
 thread_local Piece quiet_piece_buf[256][256];
 
 const int GOOD_CAPTURE = 1000000;
@@ -62,7 +62,7 @@ int score_move(Board &board, Move m, int ply, MoveGenerator &mg)
     return 90000;
   if (board.is_same_move(m, killer_table[1][ply]))
     return 80000;
-  
+
   return history_table[board.squares[m.from]][m.to];
 }
 
@@ -72,8 +72,8 @@ int negamax(Board &board, MoveGenerator &move_gen, int alpha, int beta, int dept
 {
   if (ply >= 250)
     return move_gen.is_in_check(board, board.is_white_to_move())
-             ? 0
-             : evaluate_position(board, move_gen);
+               ? 0
+               : evaluate_position(board, move_gen);
   if (board.half_move_count >= 100)
     return 0;
   if (ply > 0 && is_repetition(board))
@@ -148,7 +148,7 @@ int negamax(Board &board, MoveGenerator &move_gen, int alpha, int beta, int dept
 
   // recursive call
   int (&quiets_to)[256] = quiet_to_buf[ply];
-  Piece (&quiets_pieces)[256] = quiet_piece_buf[ply];
+  Piece(&quiets_pieces)[256] = quiet_piece_buf[ply];
   int quiets_count = 0;
   for (int i = 0; i < move_gen.move_lists[ply].count; i++)
   {

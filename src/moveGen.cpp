@@ -3,26 +3,7 @@
 
 MoveGenerator::MoveGenerator()
 {
-  rook_attack_table = new u64 *[64];
-  for (int i = 0; i < 64; i++)
-    rook_attack_table[i] = new u64[4096];
-
-  bishop_attack_table = new u64 *[64];
-  for (int i = 0; i < 64; i++)
-    bishop_attack_table[i] = new u64[512];
-
   init();
-}
-
-MoveGenerator::~MoveGenerator()
-{
-  for (int i = 0; i < 64; i++)
-    delete[] rook_attack_table[i];
-  delete[] rook_attack_table;
-
-  for (int i = 0; i < 64; i++)
-    delete[] bishop_attack_table[i];
-  delete[] bishop_attack_table;
 }
 
 void MoveGenerator::generate_moves(Board &board, int ply)

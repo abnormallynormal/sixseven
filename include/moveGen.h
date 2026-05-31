@@ -12,11 +12,10 @@ public:
   MoveList move_lists[256];
   int current_ply;
   MoveGenerator();
-  ~MoveGenerator();
   u64 knight_attack_table[64];
   u64 king_attack_table[64];
-  u64 **rook_attack_table;
-  u64 **bishop_attack_table;
+  u64 rook_attack_table[64][4096];
+  u64 bishop_attack_table[64][512];
   u64 rook_masks[64];
   u64 bishop_masks[64];
   u64 white_pawn_attack_table[64];
