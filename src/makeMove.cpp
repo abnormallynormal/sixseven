@@ -3,9 +3,9 @@
 #include "zobrist.h"
 #include "search.h"
 
-void Board::make_move(Move &m)
+void Board::make_move(Move &m, Undo &prev_state)
 {
-  m.prev_state = Undo{hash, pawns_hash, castling_rights, en_passant_square, half_move_count, squares[m.to], white_to_move, opening_material, opening_psqt, end_material, end_psqt, phase, white_castled, black_castled};
+  prev_state = Undo{hash, pawns_hash, castling_rights, en_passant_square, half_move_count, squares[m.to], white_to_move, opening_material, opening_psqt, end_material, end_psqt, phase, white_castled, black_castled};
 
   hash ^= castling_randoms[castling_rights];
   if (en_passant_square != NO_SQUARE)
@@ -98,7 +98,7 @@ void Board::make_move(Move &m)
   }
   else if (m.is_en_passant)
   {
-    m.prev_state.captured_piece = white_to_move ? bPawn : wPawn;
+    prev_state.captured_piece = white_to_move ? bPawn : wPawn;
     Piece moving_pawn = white_to_move ? wPawn : bPawn;
     Piece captured_pawn = white_to_move ? bPawn : wPawn;
     int captured_sq = white_to_move ? m.to - 8 : m.to + 8;
@@ -197,7 +197,7 @@ void Board::make_move(Move &m)
     hash ^= square_randoms[piece_from][m.to];
   }
 
-  bool is_capture = m.prev_state.captured_piece != EMPTY;
+  bool is_capture = prev_state.captured_piece != EMPTY;
   bool is_pawn_move = m.is_en_passant || m.promotion_piece != EMPTY ||
                       (!m.is_castling && (squares[m.to] == wPawn || squares[m.to] == bPawn));
   if (is_capture || is_pawn_move)

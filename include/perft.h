@@ -52,7 +52,8 @@ inline u64 perft(Board &board, int depth, bool white, MoveGenerator &move_gen, i
     u64 hash_before = board.hash;
     u64 pawns_before = board.pawns_hash;
 
-    board.make_move(m);
+    Undo undo;
+    board.make_move(m, undo);
 
     u64 hash_expected = init_hash(board);
     u64 pawns_expected = init_pawns_hash(board);
@@ -72,7 +73,7 @@ inline u64 perft(Board &board, int depth, bool white, MoveGenerator &move_gen, i
     {
       nodes += perft(board, depth - 1, !white, move_gen, ply + 1);
     }
-    board.unmake_move(m);
+    board.unmake_move(m, undo);
 
     if (board.hash != hash_before || board.pawns_hash != pawns_before)
     {

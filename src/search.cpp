@@ -166,20 +166,21 @@ int negamax(Board &board, MoveGenerator &move_gen, int alpha, int beta, int dept
     Move m = move_gen.move_lists[ply].moves[i];
     Piece piece_moved = board.squares[m.from];
 
-    board.make_move(m);
+    Undo undo;
+    board.make_move(m, undo);
 
     if (move_gen.is_in_check(board, !board.is_white_to_move()))
     {
-      board.unmake_move(m);
+      board.unmake_move(m, undo);
       continue;
     }
 
     bool move_is_check = move_gen.is_in_check(board, board.is_white_to_move());
-    bool move_is_capture = !(m.prev_state.captured_piece == EMPTY);
+    bool move_is_capture = !(undo.captured_piece == EMPTY);
 
     if (depth <= 5 && quiets_count >= 3 + depth * depth && !move_is_check && !move_is_capture && m.promotion_piece == EMPTY && !is_in_check)
     {
-      board.unmake_move(m);
+      board.unmake_move(m, undo);
       quiets_to[quiets_count] = m.to;
       quiets_pieces[quiets_count] = piece_moved;
       quiets_count++;
@@ -254,7 +255,7 @@ int negamax(Board &board, MoveGenerator &move_gen, int alpha, int beta, int dept
           }
         }
       }
-      board.unmake_move(m);
+      board.unmake_move(m, undo);
       break;
     }
     if (!move_is_capture && m.promotion_piece == EMPTY)
@@ -263,7 +264,7 @@ int negamax(Board &board, MoveGenerator &move_gen, int alpha, int beta, int dept
       quiets_pieces[quiets_count] = piece_moved;
       quiets_count++;
     }
-    board.unmake_move(m);
+    board.unmake_move(m, undo);
   }
 
   // game ending situation check
@@ -343,10 +344,12 @@ RootReturn root_negamax(Board &board, MoveGenerator &move_gen, int alpha, int be
     std::swap(move_gen.move_lists[0].moves[i], move_gen.move_lists[0].moves[best_index]);
 
     Move m = move_gen.move_lists[0].moves[i];
-    board.make_move(m);
+
+    Undo undo;
+    board.make_move(m, undo);
     if (move_gen.is_in_check(board, !board.is_white_to_move()))
     {
-      board.unmake_move(m);
+      board.unmake_move(m, undo);
       continue;
     }
     int score = 0;
@@ -363,7 +366,7 @@ RootReturn root_negamax(Board &board, MoveGenerator &move_gen, int alpha, int be
       }
     }
 
-    board.unmake_move(m);
+    board.unmake_move(m, undo);
 
     if (score > greatest_value)
     {
@@ -440,15 +443,16 @@ int quiescence(Board &board, MoveGenerator &move_gen, int alpha, int beta, int p
       std::swap(move_gen.move_lists[ply].moves[i], move_gen.move_lists[ply].moves[best]);
 
       Move m = move_gen.move_lists[ply].moves[i];
-      board.make_move(m);
+      Undo undo;
+      board.make_move(m, undo);
 
       if (move_gen.is_in_check(board, !board.is_white_to_move()))
       {
-        board.unmake_move(m);
+        board.unmake_move(m, undo);
         continue;
       }
       int score = -quiescence(board, move_gen, -beta, -alpha, ply + 1, NO_EVAL, depth + 1, stop_flag);
-      board.unmake_move(m);
+      board.unmake_move(m, undo);
       if (score > greatest_val)
       {
         greatest_val = score;
@@ -501,14 +505,15 @@ int quiescence(Board &board, MoveGenerator &move_gen, int alpha, int beta, int p
       int captured_val = m.is_en_passant ? piece_vals[wPawn] : piece_vals[board.squares[m.to]];
       if (m.promotion_piece == EMPTY && stand_pat + captured_val + 200 < alpha)
         continue;
-      board.make_move(m);
+      Undo undo;
+      board.make_move(m, undo);
       if (move_gen.is_in_check(board, !board.is_white_to_move()))
       {
-        board.unmake_move(m);
+        board.unmake_move(m, undo);
         continue;
       }
       int score = -quiescence(board, move_gen, -beta, -alpha, ply + 1, NO_EVAL, depth + 1, stop_flag);
-      board.unmake_move(m);
+      board.unmake_move(m, undo);
       if (score > greatest_val)
       {
         greatest_val = score;
@@ -544,10 +549,11 @@ int see(Board &board, int square, bool white, MoveGenerator &mg)
   if (smallest_attacker_from != NO_SQUARE)
   {
     Move m = Move(smallest_attacker_from, square);
-    board.make_move(m);
-    int captured_val = piece_vals[m.prev_state.captured_piece];
+    Undo undo;
+    board.make_move(m, undo);
+    int captured_val = piece_vals[undo.captured_piece];
     value = std::max(0, captured_val - see(board, square, !white, mg));
-    board.unmake_move(m);
+    board.unmake_move(m, undo);
   }
   return value;
 }
@@ -555,9 +561,10 @@ int see(Board &board, int square, bool white, MoveGenerator &mg)
 int see_capture(Board &board, Move m, bool white, MoveGenerator &mg)
 {
   int value = 0;
-  board.make_move(m);
-  int captured_val = piece_vals[m.prev_state.captured_piece];
+  Undo undo;
+  board.make_move(m, undo);
+  int captured_val = piece_vals[undo.captured_piece];
   value = std::max(0, captured_val - see(board, m.to, !white, mg));
-  board.unmake_move(m);
+  board.unmake_move(m, undo);
   return value;
 }

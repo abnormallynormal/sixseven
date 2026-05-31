@@ -2,22 +2,22 @@
 #include "zobrist.h"
 #include "search.h"
 
-void Board::unmake_move(Move &m)
+void Board::unmake_move(Move &m, Undo &prev_state)
 {
   repetition_count--;
-  hash = m.prev_state.hash;
-  pawns_hash = m.prev_state.pawns_hash;
-  castling_rights = m.prev_state.castling_rights;
-  en_passant_square = m.prev_state.en_passant_square;
-  half_move_count = m.prev_state.half_move_count;
-  white_to_move = m.prev_state.white_to_move;
-  opening_material = m.prev_state.prev_opening_material;
-  opening_psqt = m.prev_state.prev_opening_psqt;
-  end_material = m.prev_state.prev_end_material;
-  end_psqt = m.prev_state.prev_end_psqt;
-  phase = m.prev_state.prev_phase;
-  white_castled = m.prev_state.prev_white_castled;
-  black_castled = m.prev_state.prev_black_castled;
+  hash = prev_state.hash;
+  pawns_hash = prev_state.pawns_hash;
+  castling_rights = prev_state.castling_rights;
+  en_passant_square = prev_state.en_passant_square;
+  half_move_count = prev_state.half_move_count;
+  white_to_move = prev_state.white_to_move;
+  opening_material = prev_state.prev_opening_material;
+  opening_psqt = prev_state.prev_opening_psqt;
+  end_material = prev_state.prev_end_material;
+  end_psqt = prev_state.prev_end_psqt;
+  phase = prev_state.prev_phase;
+  white_castled = prev_state.prev_white_castled;
+  black_castled = prev_state.prev_black_castled;
 
   if (m.is_castling)
   {
@@ -79,21 +79,21 @@ void Board::unmake_move(Move &m)
     u64 to = 1ULL << m.to;
     bitboards[m.promotion_piece] &= ~to;
     bitboards[pawn_color] |= from;
-    if (m.prev_state.captured_piece != EMPTY)
+    if (prev_state.captured_piece != EMPTY)
     {
-      bitboards[m.prev_state.captured_piece] |= to;
+      bitboards[prev_state.captured_piece] |= to;
     }
-    squares[m.to] = m.prev_state.captured_piece;
+    squares[m.to] = prev_state.captured_piece;
     squares[m.from] = pawn_color;
   }
   else
   {
     Piece moving_piece = squares[m.to];
     bitboards[moving_piece] = (bitboards[moving_piece] & ~(1ULL << m.to)) | (1ULL << m.from);
-    if (m.prev_state.captured_piece != EMPTY)
-      bitboards[m.prev_state.captured_piece] |= (1ULL << m.to);
+    if (prev_state.captured_piece != EMPTY)
+      bitboards[prev_state.captured_piece] |= (1ULL << m.to);
     squares[m.from] = moving_piece;
-    squares[m.to] = m.prev_state.captured_piece;
+    squares[m.to] = prev_state.captured_piece;
   }
 
   update_position();

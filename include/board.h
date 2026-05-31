@@ -35,9 +35,9 @@ public:
   Board();
   void print_board();
 
-  void make_move(Move &m);
+  void make_move(Move &m, Undo &prev_state);
   void make_null_move(Undo &undo_null);
-  void unmake_move(Move &m);
+  void unmake_move(Move &m, Undo &prev_state);
   void unmake_null_move(Undo &undo_null);
 
   inline void add_piece_eval(Piece p, int sq)
@@ -85,8 +85,7 @@ public:
     white_pieces = bitboards[wPawn] | bitboards[wKnight] | bitboards[wBishop] | bitboards[wRook] | bitboards[wQueen] | bitboards[wKing];
     black_pieces = bitboards[bPawn] | bitboards[bKnight] | bitboards[bBishop] | bitboards[bRook] | bitboards[bQueen] | bitboards[bKing];
     occupied_squares = white_pieces | black_pieces;
-   
-  }
+    }
   inline bool has_piece_material()
   {
     return bitboards[wKnight] | bitboards[wBishop] | bitboards[wRook] | bitboards[wQueen] | bitboards[bKnight] | bitboards[bBishop] | bitboards[bRook] | bitboards[bQueen];

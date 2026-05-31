@@ -113,7 +113,8 @@ void position_handler(std::vector<std::string> str, Board &board)
       for (int i = moves_index + 1; i < str.size(); i++)
       {
         Move move = move_parser(str[i], board);
-        board.make_move(move);
+        Undo undo;
+        board.make_move(move, undo);
       }
     }
   }
@@ -125,7 +126,8 @@ void position_handler(std::vector<std::string> str, Board &board)
       for (int i = moves_index + 1; i < str.size(); i++)
       {
         Move move = move_parser(str[i], board);
-        board.make_move(move);
+        Undo undo;
+        board.make_move(move, undo);
       }
     }
   }

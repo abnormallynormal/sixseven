@@ -1,3 +1,4 @@
+#include <algorithm>
 #include "moveGen.h"
 #include "board.h"
 #include "bitboardMasks.h"

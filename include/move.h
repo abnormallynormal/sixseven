@@ -31,7 +31,6 @@ struct Move
   bool is_kingside;
   bool is_en_passant;
   Piece promotion_piece;
-  Undo prev_state;
   int set_ep_square;
   Move() : from(0), to(0), set_ep_square(NO_SQUARE), is_castling(false), is_kingside(false), is_en_passant(false), promotion_piece(EMPTY) {};
   Move(int from, int to) : from(from), to(to), set_ep_square(NO_SQUARE), is_castling(false), is_kingside(false), is_en_passant(false), promotion_piece(EMPTY) {};
