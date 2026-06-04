@@ -2,7 +2,7 @@
 
 > An UCI Chess Engine written from scratch in C++. It is live 24/7 on lichess.org and anyone with an account can play against it.
 
-![Checkmate in action, checkmating its opponent](Checkmate.png)
+![Checkmate in action, checkmating its opponent](checkmate.png)
 
 ## What is this?
 
